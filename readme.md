@@ -40,9 +40,9 @@ RB or ML will apply the different parsing function, which will return those nump
 
 If it is not a text based represensation like smiles or inchi
 
---------------------------------------
+|------|---------|---------|---------|
 | Atom | X_Coord | Y_Coord | Z_Coord | 
---------------------------------------
+|------|---------|---------|---------|
 
 Each will parsing function will be coupled with a lenght detector to check all molecules' atom have the expected lenght
 
