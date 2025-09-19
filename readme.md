@@ -56,16 +56,10 @@ RDKIT is one of the most used open sourced chemical package avaialble, all molec
 
 A dict with : 
 
-{ 
-
-"Atoms"  : list(atom1, ..., atomn)
-
-"CoordX"   : list(atom1x, ..., atomnx)
-
-"CoordY"   : list(atom1y, ..., atomny)
-
-"CoordZ"   : list(atom1y, ..., atomny)
-
-"RDKITMol" : RDKIT.mol
-
+{\
+"Atoms"    : list(atom1, ..., atomn),\
+"CoordX"   : list(atom1x, ..., atomnx),\
+"CoordY"   : list(atom1y, ..., atomny),\
+"CoordZ"   : list(atom1y, ..., atomny),\
+"RDKITMol" : RDKIT.mol\
 }
