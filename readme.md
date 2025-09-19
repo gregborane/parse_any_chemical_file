@@ -4,31 +4,31 @@ This repo is built in order to provide a python file to parse most of molecular 
 
 Format supported : 
 
-| Format        | Description                                                               |
-| --------------|---------------------------------------------------------------------------|
-|.mol           | MDL Molfile                                                               |         
-|.sdf           | Structure Data File (molecule sets, still small molecules)                |
-|.mol2          | Tripos Mol2                                                               |
-|.cml           | Chemical Markup Language                                                  |
-|.xyz           | Cartesian coordinates                                                     |
-|.mae           | Maestro small-molecule format                                             |
-|.sd            | SDfile variant                                                            |
-|.gjf / .com    | Gaussian input (geometry of one molecule)                                 |
-|.chk           | Gaussian checkpoint (molecular state data)                                |
-|.fchk          | Gaussian formatted checkpoint                                             |
-|.cube          | Gaussian volumetric data tied to a single molecule                        |
-|.mop           | MOPAC input                                                               |
-|.mopout        | MOPAC output                                                              |
-|.pdbqt         | AutoDock input ligand format (derived from PDB, for small molecules only) |
-|.pqr           | PDB with charges and radii (often for small molecules)                    |
-|.inchi         | IUPAC InChI string saved as file                                          |
-|.inchikey      | Hashed InChI representation                                               |
-|.smiles / .smi | SMILES line notation file                                                 |
-|.json          | chem-specific schemas like ChemJSON or PubChem JSON for molecules)        |
-|.yaml          | (used in some molecular toolkits for small-molecule storage)              |
-|.mrv           | ChemAxon Marvin format                                                    |
-|.cdx / .cdxml  | ChemDraw binary and XML molecule formats                                  |
-|.rxn           | can contain one molecule in some case                                     |
+| Format        | Description                                                               | Is done |
+| --------------|---------------------------------------------------------------------------|----------
+|.mol           | MDL Molfile                                                               | N       |
+|.sdf           | Structure Data File (molecule sets, still small molecules)                | N       |
+|.mol2          | Tripos Mol2                                                               | N       |
+|.cml           | Chemical Markup Language                                                  | N       |
+|.xyz           | Cartesian coordinates                                                     | Y       |
+|.mae           | Maestro small-molecule format                                             | N       |
+|.sd            | SDfile variant                                                            | N       |
+|.gjf / .com    | Gaussian input (geometry of one molecule)                                 | N       |
+|.chk           | Gaussian checkpoint (molecular state data)                                | N       |
+|.fchk          | Gaussian formatted checkpoint                                             | N       |
+|.cube          | Gaussian volumetric data tied to a single molecule                        | N       |
+|.mop           | MOPAC input                                                               | N       |
+|.mopout        | MOPAC output                                                              | N       |
+|.pdbqt         | AutoDock input ligand format (derived from PDB, for small molecules only) | N       |
+|.pqr           | PDB with charges and radii (often for small molecules)                    | N       |
+|.inchi         | IUPAC InChI string saved as file                                          | N       |
+|.inchikey      | Hashed InChI representation                                               | N       |
+|.smiles / .smi | SMILES line notation file                                                 | N       |
+|.json          | chem-specific schemas like ChemJSON or PubChem JSON for molecules)        | N       |
+|.yaml          | (used in some molecular toolkits for small-molecule storage)              | N       |
+|.mrv           | ChemAxon Marvin format                                                    | N       |
+|.cdx / .cdxml  | ChemDraw binary and XML molecule formats                                  | N       |
+|.rxn           | can contain one molecule in some case                                     | N       |
 
 3 Steps will be used to return the final object :
 
