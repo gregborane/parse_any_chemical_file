@@ -2,6 +2,11 @@
 import numpy as np
 
 # %%
+with open("/home/greg/Code/parse_any_chemical_file/ex.mol", "r") as mol :
+    lines = mol.readlines()
+print(lines[3].split()[0])
+
+# %%
 def check_len(molecule : dict) -> dict :
 
     """
@@ -67,10 +72,15 @@ def parse_mol(path : str) -> dict :
     with open(path, "r") as mol:
         lines = mol.readlines()
 
+    pre_mol = list()
+    for i in range(len(lines[3].split()[0])):
+        pre_mol.append(lines[3+i].split()[0:3])
+    
+    pre_mol = np.array(pre_mol)[:,[3,0,1,2]]
     molecule = {
-            "num_atom"   : lines[0], 
-            "bonus info" : lines[1],
-            "coord"      : np.array(lines[2:])
+            "num_atom"   : lines[3].split()[0], 
+            "bonus info" : "skipped_atm",
+            "coord"      : pre_mol
     }
 
     return molecule
