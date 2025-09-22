@@ -6,9 +6,9 @@ Format supported :
 
 | Format        | Description                                                               | Is done |
 | --------------|---------------------------------------------------------------------------|----------
-|.mol           | MDL Molfile                                                               | N       |
+|.mol           | MDL Molfile                                                               | ~       |
 |.sdf           | Structure Data File (molecule sets, still small molecules)                | N       |
-|.mol2          | Tripos Mol2                                                               | N       |
+|.mol2          | Tripos Mol2                                                               | Y       |
 |.cml           | Chemical Markup Language                                                  | N       |
 |.xyz           | Cartesian coordinates                                                     | Y       |
 |.mae           | Maestro small-molecule format                                             | N       |
@@ -34,8 +34,8 @@ Format supported :
 
 ## Detection of the extension
 
-First using a rule based (RB).
-Later using a simple Machine Learning (ML) model to speed up proccess and code readability.
+First using a rule based (RB).\
+NOT YET Later using a simple Machine Learning (ML) model to speed up proccess and code readability.
 
 ## Parsing the data
 
@@ -57,9 +57,13 @@ RDKIT is one of the most used open sourced chemical package avaialble, all molec
 A dict with : 
 
 {\
-"Atoms"    : list(atom1, ..., atomn),\
-"CoordX"   : list(atom1x, ..., atomnx),\
-"CoordY"   : list(atom1y, ..., atomny),\
-"CoordZ"   : list(atom1y, ..., atomny),\
-"RDKITMol" : RDKIT.mol\
+"Bonds"      : (if present take indices in file, then determined),\
+"Double"     : (if present take indices in file, then determined),\
+"Triple"     : (if present take indices in file, then determined),\
+"Properties" : dict(properties found in the file if any),\
+"Atoms"      : list(atom1, ..., atomn),\
+"CoordX"     : list(atom1x, ..., atomnx),\
+"CoordY"     : list(atom1y, ..., atomny),\
+"CoordZ"     : list(atom1y, ..., atomny),\
+"RDKITMol"   : RDKIT.mol\
 }
