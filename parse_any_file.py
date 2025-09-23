@@ -1,5 +1,7 @@
 # %%
 import numpy as np
+import json
+import yaml
 
 # %%
 with open("/home/greg/Code/parse_any_chemical_file/ex.mol", "r") as mol:
@@ -86,15 +88,14 @@ def parse_xyz(path: str) -> dict:
     # Read the file
     with open(path, "r") as xyz:
         lines = xyz.readlines()
-   
+
     coords = list()
     num_atom = int(lines[0].split()[0])
-    for line_coord in lines[2:num_atom+1]:
+    for line_coord in lines[2 : num_atom + 1]:
         tokens = line_coord.split()
         atoms = tokens[1]
         x, y, z = map(float, tokens[2:5])
         coords.append((atoms, x, y, z))
-
 
     # final object
     molecule = {
@@ -109,11 +110,8 @@ def parse_xyz(path: str) -> dict:
 # %%
 def parse_mol(path: str) -> dict:
     """
-    Perform parsing similarly to .xyz.
-    Additionnal properties are stored in a dict following :
-    properties = {
-    "prop 1" : [values], etc
-    }
+    Parse MOL like XYZ adding bonds and
+    properties since its available.
     """
 
     # Read the file
@@ -126,16 +124,17 @@ def parse_mol(path: str) -> dict:
     # Get Coordinates information based on atoms number
     pre_mol = list()
     num_atom = int(lines[3].split()[0])
-    for line_coord in lines[2:num_atom+1]:
+    for line_coord in lines[4 : num_atom + 1]:
         tokens = line_coord.split()
         atoms = tokens[3]
         x, y, z = map(float, tokens[0:3])
         pre_mol.append((atoms, x, y, z))
 
     # Get bonds
-    #TODO
+    bonds, double_bonds, triple_bonds = list(), list(), list()
+    # TODO
 
-    # Get optionnal information from the file 
+    # Get optionnal information from the file
     j = 0
     properties = dict()
     line_info = lines[3 + j + num_atom]
@@ -148,17 +147,20 @@ def parse_mol(path: str) -> dict:
     molecule = {
         "num_atom": num_atom,
         "properties": properties,
+        "bonds": bonds,
+        "double_bonds": double_bonds,
+        "triple_bonds": triple_bonds,
         "coord": np.array(pre_mol),
     }
 
     return molecule
 
+
 # %%
 def parse_mol2(path: str) -> dict:
     """
-    Perform parsing similary to .xyz
-    Add bond information since its available
-
+    Parse MOL2 like XYZ adding bonds
+    information since they exist.
     """
 
     with open(path, "r") as mol2:
@@ -171,13 +173,13 @@ def parse_mol2(path: str) -> dict:
 
     for i, line in enumerate(lines):
         if line.startswith("@<TRIPOS>MOLECULE"):
-            num_atom, num_bond = map(int, lines[i+2].split()[:2])
-            mol_type = lines[i+3].strip()
-            charges_type = lines[i+4].strip()
-            comment = lines[i+5].strip() if len(lines) > i+5 else None
+            num_atom, num_bond = map(int, lines[i + 2].split()[:2])
+            mol_type = lines[i + 3].strip()
+            charges_type = lines[i + 4].strip()
+            comment = lines[i + 5].strip() if len(lines) > i + 5 else None
 
         elif line.startswith("@<TRIPOS>ATOM"):
-            for line_coord in lines[i+1:i+1+num_atom]:
+            for line_coord in lines[i + 1 : i + 1 + num_atom]:
                 tokens = line_coord.split()
                 atoms = tokens[1]
                 x, y, z = map(float, tokens[2:5])
@@ -185,7 +187,7 @@ def parse_mol2(path: str) -> dict:
                 charges.append(float(tokens[-1]))
 
         elif line.startswith("@<TRIPOS>BOND"):
-            for line_bond in lines[i+1:i+1+num_bond]:
+            for line_bond in lines[i + 1 : i + 1 + num_bond]:
                 tokens = line_bond.split()
                 a1, a2, bond_type = tokens[1], tokens[2], tokens[3]
                 if bond_type == "1":
@@ -194,20 +196,115 @@ def parse_mol2(path: str) -> dict:
                     double_bonds.append((a1, a2))
                 elif bond_type == "3":
                     triple_bonds.append((a1, a2))
-        else :
-            raise ValueError("Cannot parse chemical information without \n MOLECULE, ATOM, BOND sections.")
+        else:
+            raise ValueError(
+                "Cannot parse chemical information without \n MOLECULE, ATOM, BOND sections."
+            )
 
     molecule = {
         "num_atom": num_atom,
         "num_bond": num_bond,
         "mol_type": mol_type,
-        "charges_type" : charges_type,
+        "charges_type": charges_type,
         "comment": comment,
         "coords": np.array(coords),
         "charges": charges,
         "bonds": bonds,
         "double_bonds": double_bonds,
-        "triple_bonds": triple_bonds
+        "triple_bonds": triple_bonds,
     }
     return molecule
-                                  
+
+
+def parse_json(path: str):
+    """
+    JSON file do not have systematic representation.
+    So they are just parsed using built in python parser.
+    """
+
+    with open(path, "r") as file:
+        data = json.load(file)
+
+    return data
+
+
+def parse_yaml(path: str):
+    """
+    YAML file do not have systematic representation.
+    So they are just aprsed using built in function.
+    """
+
+    with open(path, "r") as file:
+        data = yaml.safe_load_all(file)
+
+    return data
+
+
+def parse_sdf(path: str) -> list:
+    """
+    Parsing SDF files is very similar to .MOL since it's a container for multiple molecules under MOL format.
+    Instead a list of dict (molecules) will be returned.
+    """
+
+    with open(path, "r") as sdf:
+        lines = sdf.readlines()
+
+    molecules = list()
+    for line in lines:
+        while not line.startswith("$$$$"):
+
+            if "V3000" in lines[3].split():
+                raise KeyError("V3000 formatting is not supported yet")
+
+            # Get Coordinates information based on atoms number
+            pre_mol = list()
+            num_atom = int(lines[3].split()[0])
+            for line_coord in lines[4 : num_atom + 1]:
+                tokens = line_coord.split()
+                atoms = tokens[3]
+                x, y, z = map(float, tokens[0:3])
+                pre_mol.append((atoms, x, y, z))
+
+            # Get bonds
+            bonds, double_bonds, triple_bonds = list(), list(), list()
+            # TODO
+
+            # Get optionnal information from the file
+            j = 0
+            properties = dict()
+            line_info = lines[3 + j + num_atom]
+            while not line_info.startswith("M END"):
+                property = line_info.split()[1]
+                values = line_info.split()[2:]
+                properties[str(property)] = values
+                j += 1
+
+            molecule = {
+                "num_atom": num_atom,
+                "properties": properties,
+                "bonds": bonds,
+                "double_bonds": double_bonds,
+                "triple_bonds": triple_bonds,
+                "coord": np.array(pre_mol),
+            }
+            molecules.append(molecule)
+
+    return molecules
+
+
+def parse_mdl(path: str) -> dict:
+    """
+    Parse MDL like
+    """
+
+    tree = ET.parse(path)
+    root = tree.getroot()
+    ns = {'cml': 'http://www.xml-cml.org/schema'}
+
+    atoms = [atom.get("elementType") for atom in root.findall(".//cml:atom", ns)]
+    if 
+    x = [atom.get("x3") for atom in root.findall(".//cml:atom", ns)]
+    y = [atom.get("y3") for atom in root.findall(".//cml:atom", ns)]
+    z = [atom.get("z3") for atom in root.findall(".//cml:atom", ns)]
+
+    return molecule

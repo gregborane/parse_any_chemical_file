@@ -1,13 +1,19 @@
 # Parse any chemical file
 
+## dependencies
+
+```
+pip install numpy pyyaml json
+```
+
 This repo is built in order to provide a python file to parse most of molecular files.
 
 Format supported : 
 
 | Format        | Description                                                               | Is done |
 | --------------|---------------------------------------------------------------------------|----------
-|.mol           | MDL Molfile                                                               | ~       |
-|.sdf           | Structure Data File (molecule sets, still small molecules)                | N       |
+|.mol           | MDL Molfile                                                               | Y       |
+|.sdf           | Structure Data File (molecule sets, still small molecules)                | Y       |
 |.mol2          | Tripos Mol2                                                               | Y       |
 |.cml           | Chemical Markup Language                                                  | N       |
 |.xyz           | Cartesian coordinates                                                     | Y       |
@@ -24,8 +30,8 @@ Format supported :
 |.inchi         | IUPAC InChI string saved as file                                          | N       |
 |.inchikey      | Hashed InChI representation                                               | N       |
 |.smiles / .smi | SMILES line notation file                                                 | N       |
-|.json          | chem-specific schemas like ChemJSON or PubChem JSON for molecules)        | N       |
-|.yaml          | (used in some molecular toolkits for small-molecule storage)              | N       |
+|.json          | chem-specific schemas like ChemJSON or PubChem JSON for molecules)        | Y       |
+|.yaml          | (used in some molecular toolkits for small-molecule storage)              | Y       |
 |.mrv           | ChemAxon Marvin format                                                    | N       |
 |.cdx / .cdxml  | ChemDraw binary and XML molecule formats                                  | N       |
 |.rxn           | can contain one molecule in some case                                     | N       |
