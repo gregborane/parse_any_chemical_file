@@ -2,16 +2,7 @@
 import numpy as np
 import json
 import yaml
-
-# %%
-with open("/home/greg/Code/parse_any_chemical_file/ex.mol", "r") as mol:
-    lines = mol.readlines()
-pre_mol = list()
-for i in range(1, int(lines[3].split()[0])):
-    pre_mol.append(lines[3 + i].split()[0:4])
-pre_mol = np.array(pre_mol)[:, [3, 0, 1, 2]]
-print(pre_mol)
-
+import xml.etree.ElementTree as ET
 
 # %%
 def check_len(molecule: dict) -> dict:
@@ -72,17 +63,8 @@ def check_len(molecule: dict) -> dict:
 def parse_xyz(path: str) -> dict:
     """
     Open .xyz file and extract data as a dict
-    Store molecule's coords as a np.ndarray in a single entry
+    Store molecule's coords as a np.ndarray 
     First and Second line are an entry.
-    _____________________________________
-
-    path (str) : path to the file to treat
-    molecule (dict) : dict containing this structure :
-    molecule = {
-    "num_atom"
-    "comment"
-    "coord"
-    }
     """
 
     # Read the file
@@ -231,7 +213,7 @@ def parse_json(path: str):
 def parse_yaml(path: str):
     """
     YAML file do not have systematic representation.
-    So they are just aprsed using built in function.
+    So they are just parsed using built in function.
     """
 
     with open(path, "r") as file:
@@ -292,19 +274,90 @@ def parse_sdf(path: str) -> list:
     return molecules
 
 
-def parse_mdl(path: str) -> dict:
+def parse_cml(path: str) -> dict:
     """
-    Parse MDL like
-    """
+    Parse cml file which are a subclass of xml files.
 
+    In the doc, there are much more formatting possible so I only picked the most common ones :
+    - Atoms
+    - Coordinates
+    - Bonds Information
+    - Properties
+
+    To add more section parsing you can try:
+    for x in root.findall(.//cml:{section}):
+        x.get("attributes")
+
+    And associated code to parse data section.
+
+    More over, this parsing is built over cml.org schematic.
+
+    """
+    ns = {"cml": "http://www.xml-cml.org/schema"}
     tree = ET.parse(path)
     root = tree.getroot()
-    ns = {'cml': 'http://www.xml-cml.org/schema'}
 
     atoms = [atom.get("elementType") for atom in root.findall(".//cml:atom", ns)]
-    if 
-    x = [atom.get("x3") for atom in root.findall(".//cml:atom", ns)]
-    y = [atom.get("y3") for atom in root.findall(".//cml:atom", ns)]
-    z = [atom.get("z3") for atom in root.findall(".//cml:atom", ns)]
+
+    # Element's coordinate can be given in either two dimensions or three dimensions.
+    try:
+        x = [atom.get("x3") for atom in root.findall(".//cml:atom", ns)]
+        y = [atom.get("y3") for atom in root.findall(".//cml:atom", ns)]
+        z = [atom.get("z3") for atom in root.findall(".//cml:atom", ns)]
+
+    finally:
+        x = [atom.get("x2") for atom in root.findall(".//cml:atom", ns)]
+        y = [atom.get("y2") for atom in root.findall(".//cml:atom", ns)]
+
+    premol = np.array([atoms, x, y, z])
+    num_atom = len(atoms)
+
+    bonds, double_bonds, triple_bonds = list(), list(), list()
+
+    for atom_bonds in root.findall(".//cml:bonds", ns):
+        for key in ["atomRefs", "atomRefs2", "atomRefs3", "atomRefs4"]:
+            # atomRefs# can be used differentyly depending on the atom si it is
+            # a necessity to test them all, might lead to an error
+            try:
+                if atom_bonds.get("order") == "1" and atom_bonds.get(key):
+                    bond = str(atom_bonds.get(key))
+                    bond_atom = bond.split(" ")
+                    parsed = [int(bond_at.lstrip("a")) - 1 for bond_at in bond_atom]
+                    bonds.append(tuple(parsed))
+
+                elif atom_bonds.get("order") == "2" and atom_bonds.get(key):
+                    bond = str(atom_bonds.get(key))
+                    bond_atom = bond.split(" ")
+                    parsed = [int(bond_at.lstrip("a")) - 1 for bond_at in bond_atom]
+                    double_bonds.append(tuple(parsed))
+
+                elif atom_bonds.get("order") == "3" and atom_bonds.get(key):
+                    bond = str(atom_bonds.get(key))
+                    bond_atom = bond.split(" ")
+                    parsed = [int(bond_at.lstrip("a")) - 1 for bond_at in bond_atom]
+                    triple_bonds.append(tuple(parsed))
+
+            finally:
+                pass
+
+    properties = list()
+    for prop in root.findall(".//cml:property", ns):
+        title = prop.get("title")
+        scalar = prop.find("cml:scalar", ns)
+        if scalar is not None:
+            value = scalar.text
+            property = {title: value}
+        else:
+            continue
+        properties.append(property)
+
+    molecule = {
+        "num_atom": num_atom,
+        "properties": properties,
+        "coord": premol,
+        "bonds": bonds,
+        "double_bonds": double_bonds,
+        "triple_bonds": triple_bonds,
+    }
 
     return molecule

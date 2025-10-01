@@ -12,10 +12,10 @@ Format supported :
 
 | Format        | Description                                                               | Is done |
 | --------------|---------------------------------------------------------------------------|----------
-|.mol           | MDL Molfile                                                               | Y       |
+|.mol           | MDL Molfile                                                               | Y(bonds)|
 |.sdf           | Structure Data File (molecule sets, still small molecules)                | Y       |
 |.mol2          | Tripos Mol2                                                               | Y       |
-|.cml           | Chemical Markup Language                                                  | N       |
+|.cml           | Chemical Markup Language                                                  | Y       |
 |.xyz           | Cartesian coordinates                                                     | Y       |
 |.mae           | Maestro small-molecule format                                             | N       |
 |.sd            | SDfile variant                                                            | N       |
@@ -63,13 +63,10 @@ RDKIT is one of the most used open sourced chemical package avaialble, all molec
 A dict with : 
 
 {\
-"Bonds"      : (if present take indices in file, then determined),\
-"Double"     : (if present take indices in file, then determined),\
-"Triple"     : (if present take indices in file, then determined),\
-"Properties" : dict(properties found in the file if any),\
-"Atoms"      : list(atom1, ..., atomn),\
-"CoordX"     : list(atom1x, ..., atomnx),\
-"CoordY"     : list(atom1y, ..., atomny),\
-"CoordZ"     : list(atom1y, ..., atomny),\
-"RDKITMol"   : RDKIT.mol\
+"Bonds"       : (if present take indices in file, then determined),\
+"Double"      : (if present take indices in file, then determined),\
+"Triple"      : (if present take indices in file, then determined),\
+"Properties"  : dict(properties found in the file if any),\
+"Coordinates" : np.ndarray(atoms, coordX, coordY, coordZ),\
+"RDKITMol"    : RDKIT.mol\
 }

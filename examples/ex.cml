@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cml xmlns="http://www.xml-cml.org/schema">
+  <molecule id="water">
+    <atomArray>
+      <atom id="a1" elementType="O" x3="0.0" y3="0.0" z3="0.0"/>
+      <atom id="a2" elementType="H" x3="0.96" y3="0.0" z3="0.0"/>
+      <atom id="a3" elementType="H" x3="-0.24" y3="0.93" z3="0.0"/>
+    </atomArray>
+    <bondArray>
+      <bond id="b1" atomRefs2="a1 a2" order="1"/>
+      <bond id="b2" atomRefs2="a1 a3" order="1"/>
+    </bondArray>
+  </molecule>
+</cml>
+
