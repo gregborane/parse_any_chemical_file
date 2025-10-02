@@ -35,14 +35,14 @@ Format supported :
 |.cdx / .cdxml  | ChemDraw binary and XML molecule formats                                  | N       |
 |.rxn           | can contain one molecule in some case                                     | N       |
 
-3 Steps will be used to return the final object :
+## 3 Steps will be used to return the final object :
 
-## Detection of the extension
+### Detection of the extension
 
 First using a rule based (RB).\
 NOT YET Later using a simple Machine Learning (ML) model to speed up proccess and code readability.
 
-## Parsing the data
+### Parsing the data
 
 RB or ML will apply the different parsing function, which will return those numpy array : 4*number_of_atoms
 
@@ -53,11 +53,11 @@ If it is not a text based represensation like smiles or inchi
 
 Each will parsing function will be coupled with a lenght detector to check all molecules' atom have the expected lenght
 
-## Conversion to rdkit object
+### Conversion to rdkit object
 
 RDKIT is one of the most used open sourced chemical package avaialble, all molecule will final be converted to a rdkit mol object for easier post treatment.
 
-## Final output
+### Final output
 
 A dict with : 
 
@@ -67,5 +67,5 @@ A dict with :
 "Triple"      : (if present take indices in file, then determined),\
 "Properties"  : dict(properties found in the file if any),\
 "Coordinates" : np.ndarray(atoms, coordX, coordY, coordZ),\
-"RDKITMol"    : RDKIT.mol\
+"RDKITMol"    : rdkit.Chem.Mol\
 }
