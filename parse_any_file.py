@@ -264,7 +264,17 @@ def parse_sdf(path: str) -> list:
 
             # Get bonds
             bonds, double_bonds, triple_bonds = list(), list(), list()
-            # TODO
+            elif line.startswith("@<TRIPOS>BOND"):
+                for line_bond in lines[i + 1 : i + 1 + num_bond]:
+                    tokens = line_bond.split()
+                    a1, a2, bond_type = tokens[1], tokens[2], tokens[3]
+
+                    if bond_type == "1":
+                        bonds.append((a1, a2))
+                    elif bond_type in ("2", "ar"):
+                        double_bonds.append((a1, a2))
+                    elif bond_type == "3":
+                        triple_bonds.append((a1, a2))
 
             # Get optionnal information from the file
             j = 0
@@ -331,6 +341,7 @@ def parse_cml(path: str) -> dict:
 
     for atom_bonds in root.findall(".//cml:bonds", ns):
         for key in ["atomRefs", "atomRefs2", "atomRefs3", "atomRefs4"]:
+
             # atomRefs# can be used differentyly depending on the atom si it is
             # a necessity to test them all, might lead to an error
             try:
@@ -408,5 +419,4 @@ def parse_inchi(path : str) -> dict:
     }
 
     return molecule
-
 

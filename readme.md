@@ -3,7 +3,7 @@
 ## dependencies
 
 ```
-pip install numpy pyyaml json
+pip install numpy pyyaml json rdkit
 ```
 
 This repo is built in order to provide a python file to parse most of molecular files.
@@ -13,7 +13,7 @@ Format supported :
 | Format        | Description                                                               | Is done |
 | --------------|---------------------------------------------------------------------------|----------
 |.mol           | MDL Molfile                                                               | Y       |
-|.sdf           | Structure Data File (molecule sets, still small molecules)                | N       |
+|.sdf           | Structure Data File (molecule sets, still small molecules)                | Y       |
 |.mol2          | Tripos Mol2                                                               | Y       |
 |.cml           | Chemical Markup Language                                                  | Y       |
 |.xyz           | Cartesian coordinates                                                     | Y       |
