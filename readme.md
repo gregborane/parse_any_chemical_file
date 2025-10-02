@@ -12,8 +12,8 @@ Format supported :
 
 | Format        | Description                                                               | Is done |
 | --------------|---------------------------------------------------------------------------|----------
-|.mol           | MDL Molfile                                                               | Y(bonds)|
-|.sdf           | Structure Data File (molecule sets, still small molecules)                | Y       |
+|.mol           | MDL Molfile                                                               | Y       |
+|.sdf           | Structure Data File (molecule sets, still small molecules)                | N       |
 |.mol2          | Tripos Mol2                                                               | Y       |
 |.cml           | Chemical Markup Language                                                  | Y       |
 |.xyz           | Cartesian coordinates                                                     | Y       |
@@ -27,9 +27,8 @@ Format supported :
 |.mopout        | MOPAC output                                                              | N       |
 |.pdbqt         | AutoDock input ligand format (derived from PDB, for small molecules only) | N       |
 |.pqr           | PDB with charges and radii (often for small molecules)                    | N       |
-|.inchi         | IUPAC InChI string saved as file                                          | N       |
-|.inchikey      | Hashed InChI representation                                               | N       |
-|.smiles / .smi | SMILES line notation file                                                 | N       |
+|.inchi         | IUPAC InChI string saved as file                                          | Y       |
+|.smiles / .smi | SMILES line notation file                                                 | Y       |
 |.json          | chem-specific schemas like ChemJSON or PubChem JSON for molecules)        | Y       |
 |.yaml          | (used in some molecular toolkits for small-molecule storage)              | Y       |
 |.mrv           | ChemAxon Marvin format                                                    | N       |

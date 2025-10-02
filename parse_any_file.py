@@ -3,6 +3,7 @@ import numpy as np
 import json
 import yaml
 import xml.etree.ElementTree as ET
+from rdkit import Chem
 
 # %%
 def check_len(molecule: dict) -> dict:
@@ -92,39 +93,54 @@ def parse_xyz(path: str) -> dict:
 # %%
 def parse_mol(path: str) -> dict:
     """
-    Parse MOL like XYZ adding bonds and
-    properties since its available.
+    Parse mol file including bonds and properties
     """
-
-    # Read the file
     with open(path, "r") as mol:
         lines = mol.readlines()
 
-    if "V3000" in lines[3].split():
+    if "V3000" in lines[3]:
         raise KeyError("V3000 formatting is not supported yet")
 
-    # Get Coordinates information based on atoms number
-    pre_mol = list()
-    num_atom = int(lines[3].split()[0])
-    for line_coord in lines[4 : num_atom + 1]:
+    counts = lines[3].split()
+    num_atom = int(counts[0])
+    num_bonds = int(counts[1])
+
+    # atoms
+    pre_mol = []
+    for line_coord in lines[4:4+num_atom]:
         tokens = line_coord.split()
-        atoms = tokens[3]
+        atom = tokens[3]
         x, y, z = map(float, tokens[0:3])
-        pre_mol.append((atoms, x, y, z))
+        pre_mol.append((atom, x, y, z))
 
-    # Get bonds
-    bonds, double_bonds, triple_bonds = list(), list(), list()
-    # TODO
+    # bonds
+    bonds, double_bonds, triple_bonds = [], [], []
+    for line_bond in lines[4+num_atom:4+num_atom+num_bonds]:
+        tokens = line_bond.split()
+        a1, a2, bond_type = int(tokens[0])-1, int(tokens[1])-1, int(tokens[2])-1
+        if bond_type == 1:
+            bonds.append(
+                (a1, a2)
+            )
 
-    # Get optionnal information from the file
-    j = 0
-    properties = dict()
-    line_info = lines[3 + j + num_atom]
-    while not line_info.startswith("M END"):
-        property = line_info.split()[1]
-        values = line_info.split()[2:]
-        properties[str(property)] = values
-        j += 1
+        elif bond_type == 2:
+            double_bonds.append(
+                (a1, a2)
+            )
+
+        elif bond_type == 3:
+            triple_bonds.append(
+                (a1, a2)
+            )
+
+    # properties
+    properties = {}
+    for line in lines[4+num_atom+num_bonds:]:
+        if line.startswith("M  END"):
+            break
+        tokens = line.split()
+        if len(tokens) > 2:
+            properties[tokens[1]] = tokens[2:]
 
     molecule = {
         "num_atom": num_atom,
@@ -134,9 +150,7 @@ def parse_mol(path: str) -> dict:
         "triple_bonds": triple_bonds,
         "coord": np.array(pre_mol),
     }
-
     return molecule
-
 
 # %%
 def parse_mol2(path: str) -> dict:
@@ -158,7 +172,8 @@ def parse_mol2(path: str) -> dict:
             num_atom, num_bond = map(int, lines[i + 2].split()[:2])
             mol_type = lines[i + 3].strip()
             charges_type = lines[i + 4].strip()
-            comment = lines[i + 5].strip() if len(lines) > i + 5 else None
+            if len(lines) > i + 5 and not lines[i+5].startswith("@<TRIPOS>"):
+                comment = lines[i + 5].strip()        
 
         elif line.startswith("@<TRIPOS>ATOM"):
             for line_coord in lines[i + 1 : i + 1 + num_atom]:
@@ -361,3 +376,37 @@ def parse_cml(path: str) -> dict:
     }
 
     return molecule
+
+def parse_smi(path : str) -> dict:
+    """
+    Parse smiles files and convert them into RDKIT mol object
+    """
+
+    with open(path, "r") as smi:
+        line = smi.readlines()[0]
+    
+    molobject = Chem.MolFromSmiles(line)
+    molecule = {
+            "molecule"  : line,
+            "MolObject" : molobject
+    }
+
+    return molecule
+
+def parse_inchi(path : str) -> dict:
+    """
+    Parse inchi file and convert them into RDKIT mol object
+    """
+
+    with open(path, "r") as inchi:
+        line = inchi.readlines()[0]
+
+    molobject = Chem.inchi.MolFromInchi(line)
+    molecule = {
+            "text"      : line,
+            "molobject" : molobject
+    }
+
+    return molecule
+
+
