@@ -5,152 +5,174 @@ import yaml
 import xml.etree.ElementTree as ET
 from rdkit import Chem
 
-# %%
-def check_len(molecule: dict) -> dict:
-    """
-    Check if molecule file is correct : testing if each coor col is correct : must be a np.ndarray
-    of the following form :
+def check_len(molecule: dict) -> bool:
+    
+    if molecule is not None:
+        return True
 
-    np.ndarray = | atom | x | y | z |
-    If the order is not respected then the function cannot verrify that the given molecule is valid.
+def test_extensions(content: str|list, extension: str) -> bool:
+        if isinstance(content, str) and content.split(".")[-1].lower() != extension.lower():
+            raise ValueError("File is not " + extension)
+        else :
+            return True
 
-    Test made :
-
-        - test if atoms are given with their symbol and not with their atomic number : should be modified with
-        an existing periodic table
-        - test if coords are only number is
-
-    molecule (dict) : dictionnary obtained after using functions below
-    """
-
-    molecule_array = molecule["coord"]
-
-    # testing atoms symbols
-    test_array = np.vectorize(lambda x: isinstance(x, str))(molecule_array[:, 0])
-    missing_pos = np.array([i for i in test_array.shape[0] if not test_array[:, 0]])
-
-    if not any(test_array):
-        raise ValueError(
-            f"invalid file : atom at position {missing_pos + 1} is/are incorrect"
-        )
-
-    # testing coord numbers
-    for col in range(1, molecule_array.shape[1]):
-        test_array = np.vectorize(
-            lambda x: isinstance(x, (int, float, complex, np.number))
-        )(molecule_array[:, col])
-        missing_pos = np.array([i for i in test_array.shape[0] if not test_array[i]])
-
-        if not any(test_array):
-            if col == 1:
-                raise ValueError(
-                    f"invalid file : coord x at position {missing_pos + 1} are incorrect"
-                )
-
-            elif col == 2:
-                raise ValueError(
-                    f"invalid file : coord x at position {missing_pos + 1} are incorrect"
-                )
-
-            elif col == 3:
-                raise ValueError(
-                    f"invalid file : coord x at position {missing_pos + 1} are incorrect"
-                )
-
-    return molecule
-
+def read_lines(content : str, extension: str) -> list:
+    test_extensions(content, extension)
+    if isinstance(content, str):
+        with open(content, "r") as f:
+            return f.readlines()
 
 # %%
-def parse_xyz(path: str) -> dict:
+class XYZ:
     """
-    Open .xyz file and extract data as a dict
-    Store molecule's coords as a np.ndarray 
-    First and Second line are an entry.
+    accept as valid input :
+
+        - direct path to the file 
+        - ""readlines"" or list if same building is used
+    
     """
 
-    # Read the file
-    with open(path, "r") as xyz:
-        lines = xyz.readlines()
+    @staticmethod
+    def get_num_atoms(content : str|list) -> int:
+        
+        lines = read_lines(content, "xyz") if isinstance(content, str) else content
+        try:
+            return int(lines[0])
+        except (IndexError, ValueError):
+            raise ValueError("Fail parsing num atom: error line 1")
 
-    coords = list()
-    num_atom = int(lines[0].split()[0])
-    for line_coord in lines[2 : num_atom + 1]:
-        tokens = line_coord.split()
-        atoms = tokens[1]
-        x, y, z = map(float, tokens[2:5])
-        coords.append((atoms, x, y, z))
+    @staticmethod
+    def get_comment(content : str|list) -> str:
+        
+        lines = read_lines(content, "xyz") if isinstance(content, str) else content
+        try:
+            return lines[1].strip()
+        except IndexError:
+            raise ValueError("Fail parsing comment: error line 2")
 
-    # final object
-    molecule = {
-        "num_atom": num_atom,
-        "comment": lines[1],
-        "coord": np.array(coords),
-    }
+    @staticmethod
+    def get_coord(content: str|list) -> tuple:
 
-    return molecule
+        lines = read_lines(content, "xyz") if isinstance(content, str) else content
+        try:
+            a = [line.split()[0] for line in lines[2:]]
+            x = [line.split()[1] for line in lines[2:]]
+            y = [line.split()[2] for line in lines[2:]]
+            z = [line.split()[3] for line in lines[2:]]
+            return a, np.array([x, y, z], dtype=np.float64)
+        except (IndexError, ValueError):
+            raise ValueError(f"Fail parsing coord: error within line 3 to {len(lines)+1}")
 
+    @staticmethod
+    def parse_xyz(content: str|list) -> dict:
+
+        lines = read_lines(content, "xyz") if isinstance(content, str) else content
+        return {
+            "num_atom" : XYZ.get_num_atoms(lines),
+            "comment"  : XYZ.get_comment(lines),
+            "atoms"    : XYZ.get_coord(lines)[0],
+            "coords"   : XYZ.get_coord(lines)[1],
+        }
 
 # %%
-def parse_mol(path: str) -> dict:
+class MOL:
     """
-    Parse mol file including bonds and properties
+    Accept as valid input:
+        - Path to file
+        - List from "readlines command"
+
     """
-    with open(path, "r") as mol:
-        lines = mol.readlines()
+    
+    @staticmethod
+    def get_num_info(content: str|list) -> tuple:
+         
+        lines = read_lines(content, "mol") if isinstance(content, str) else content
+        
+        try:
+            if "V3000" in lines[3]:
+                raise ValueError("V3000 formatting is not supported")
+                
+            counts = lines[3].split()
+            num_atom = int(counts[0])
+            num_bonds = int(counts[1])
+            return num_atom, num_bonds
+        except (ValueError, IndexError):
+            raise ValueError("Fail parsing num bonds or atoms at line 4")
 
-    if "V3000" in lines[3]:
-        raise KeyError("V3000 formatting is not supported yet")
+    @staticmethod
+    def get_coord(content: str|list) -> tuple:
+        
+        lines = read_lines(content, "mol") if isinstance(content, str) else content
+        num_atom = MOL.get_num_info(lines)[0]
+        
+        try:
+            a = [line.split()[3] for line in lines[4:4+num_atom]]
+            x = [line.split()[0] for line in lines[4:4+num_atom]]
+            y = [line.split()[1] for line in lines[4:4+num_atom]]
+            z = [line.split()[2] for line in lines[4:4+num_atom]]
+            return a, np.array([x,y,z], dtype=np.float64) 
+        except (ValueError, IndexError):
+            raise ValueError(f"Error parsing coords between lines 5;{num_atom+1}")
 
-    counts = lines[3].split()
-    num_atom = int(counts[0])
-    num_bonds = int(counts[1])
+    @staticmethod
+    def get_bonds(content: str|list) -> tuple:
 
-    # atoms
-    pre_mol = []
-    for line_coord in lines[4:4+num_atom]:
-        tokens = line_coord.split()
-        atom = tokens[3]
-        x, y, z = map(float, tokens[0:3])
-        pre_mol.append((atom, x, y, z))
+        lines = read_lines(content, "mol") if isinstance(content, str) else content
+        num_atom, num_bonds = MOL.get_num_info(content) 
+        
+        try:
+            bonds, double_bonds, triple_bonds = [], [], []
+            for line_bond in lines[4+num_atom:4+num_atom+num_bonds]:
+                tokens = line_bond.split()
+                a1, a2, bond_type = int(tokens[0])-1, int(tokens[1])-1, int(tokens[2])-1
+                if bond_type == 1:
+                    bonds.append(
+                        (a1, a2)
+                    )
+                elif bond_type == 2:
+                    double_bonds.append(
+                        (a1, a2)
+                    )
+                elif bond_type == 3:
+                    triple_bonds.append(
+                        (a1, a2)
+                    )
+            return bonds, double_bonds, triple_bonds
+        except (ValueError, IndexError):
+            raise ValueError(f"Error parsing bonds information between lines {5+num_atom} and {5+num_atom+num_bonds}")
 
-    # bonds
-    bonds, double_bonds, triple_bonds = [], [], []
-    for line_bond in lines[4+num_atom:4+num_atom+num_bonds]:
-        tokens = line_bond.split()
-        a1, a2, bond_type = int(tokens[0])-1, int(tokens[1])-1, int(tokens[2])-1
-        if bond_type == 1:
-            bonds.append(
-                (a1, a2)
-            )
+    @staticmethod
+    def get_information(content: str|list) -> dict:
+    
+        lines = read_lines(content, "mol") if isinstance(content, str) else content
+        num_atom, num_bonds = MOL.get_num_info(content)
+        
+        try:
+            properties = {}
+            for line in lines[4+num_atom+num_bonds:]:
+                if line.startswith("M  END"):
+                    break
+                tokens = line.split()
+                if len(tokens) > 2:
+                    properties[tokens[1]] = tokens[2:]
+            return properties
+        except (ValueError, IndexError):
+            raise ValueError(f"Error Parsing Information between lines {6+num_atom+num_bonds} and {len(lines)+1}")
 
-        elif bond_type == 2:
-            double_bonds.append(
-                (a1, a2)
-            )
-
-        elif bond_type == 3:
-            triple_bonds.append(
-                (a1, a2)
-            )
-
-    # properties
-    properties = {}
-    for line in lines[4+num_atom+num_bonds:]:
-        if line.startswith("M  END"):
-            break
-        tokens = line.split()
-        if len(tokens) > 2:
-            properties[tokens[1]] = tokens[2:]
-
-    molecule = {
-        "num_atom": num_atom,
-        "properties": properties,
-        "bonds": bonds,
-        "double_bonds": double_bonds,
-        "triple_bonds": triple_bonds,
-        "coord": np.array(pre_mol),
-    }
-    return molecule
+    @staticmethod
+    def parse_mol(content: str|list) -> dict:
+    
+        lines = read_lines(content, "mol") if isinstance(content, str) else content
+        
+        return {
+            "num_atom"     : MOL.get_num_info(lines)[0],
+            "properties"   : MOL.get_information(lines),
+            "bonds"        : MOL.get_bonds(lines)[0],
+            "double_bonds" : MOL.get_bonds(lines)[1],
+            "triple_bonds" : MOL.get_bonds(lines)[2],
+            "atoms"        : MOL.get_coord(lines)[0],
+            "coord"        : MOL.get_coord(lines)[1],
+        }
 
 # %%
 def parse_mol2(path: str) -> dict:
@@ -431,3 +453,77 @@ def parse_inchi(path : str) -> dict:
 
     return molecule
 
+"""
+class ReadGaussian:
+
+    @static
+    def read_lines():
+        
+        Get Data
+       
+        if test_extensions(path, "log"): 
+            with open(path,"r") as gaussian_file:
+                    lines = gaussian_file.readlines()
+                    lines = lines
+        return lines
+
+    def extract_coordinates():
+      
+        Obtain Atoms coordinates and atomic number
+     
+        lines = read_lines()
+        num_atom, geometry_indice = None, None
+
+        for i, line in enumerate(lines[::-1]):
+            split_line = line.split()
+
+            if "NAtoms=" in split_line:
+                num_atom = int(line.split()[1])
+            
+            if "standard" in split_line and "orientation" in split_line:
+                geometry_indice = i
+        
+        if geometry_indice is None :
+            raise ValueError("No Coordinates Found")
+
+        if num_atom is None:
+            raise ValueError("Number of Atom not Found")
+
+        start_coord = len(lines) - geometry_indice + 5
+        end_coord = start_coord + num_atom
+
+        x = [float(line.split()[3]) for line in lines[start_coord: end_coord]]
+        y = [float(line.split()[4]) for line in lines[start_coord: end_coord]]
+        z = [float(line.split()[5]) for line in lines[start_coord: end_coord]]
+        atom = [float(line.split()[1]) for line in lines[start_coord: end_coord]]
+   
+        premol = np.array([atom, x, y, z])
+    
+        return premol
+
+    def extract_charges(path: str):
+       
+        Obtain partial charges from NBO calculations
+        Mulliken, 
+      
+
+        lines = read_lines(path, "log")
+        indice_mulliken = None, 
+
+        for i, lines in enumerate(lines[::-1]):
+            split_line = line.split()
+
+            if "Mulliken" in lines.split() and len(lines.split()) == 2:
+                indice_mulliken = i
+
+            if "APT" in lines.split() and len(lines.split()) == 2:
+
+        return "bite"
+
+    def extract_bond_order(path: str):
+     
+        Obtain bond order from NBO calculation
+    
+        return 'bite bite'
+
+"""
