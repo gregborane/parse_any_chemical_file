@@ -175,65 +175,87 @@ class MOL:
         }
 
 # %%
-def parse_mol2(path: str) -> dict:
-    """
-    Parse MOL2 like XYZ adding bonds
-    information since they exist.
-    """
+class MOL2:
+            bonds, double_bonds, triple_bonds = [], [], []
+        coords, charges = [], []
+        mol_type, comment, charges_type = None, None, None
+        num_atom, num_bond = 0, 0
+    def get_num_info(content: str|list) -> tuple:
+        for i, line in enumerate(lines):
+            if line.startswith("@<TRIPOS>MOLECULE"):
+                num_atom, num_bond = map(int, lines[i + 2].split()[:2])
+                mol_type = lines[i + 3].strip()
+                charges_type = lines[i + 4].strip()
+                if len(lines) > i + 5 and not lines[i+5].startswith("@<TRIPOS>"):
+                    comment = lines[i + 5].strip()        
+    
+    @staticmethod
+    def get_comment(content: str|list) -> tuple: 
+        
+        lines = read_lines(content, "mol2") if isinstance(content, str) else content
+        return 0,1
 
-    with open(path, "r") as mol2:
-        lines = mol2.readlines()
+    @staticmethod
+    def get_charges(content: str|list) -> tuple:
 
-    bonds, double_bonds, triple_bonds = [], [], []
-    coords, charges = [], []
-    mol_type, comment, charges_type = None, None, None
-    num_atom, num_bond = 0, 0
+        lines = read_lines(content, "mol2") if isinstance(content, str) else content
 
-    for i, line in enumerate(lines):
-        if line.startswith("@<TRIPOS>MOLECULE"):
-            num_atom, num_bond = map(int, lines[i + 2].split()[:2])
-            mol_type = lines[i + 3].strip()
-            charges_type = lines[i + 4].strip()
-            if len(lines) > i + 5 and not lines[i+5].startswith("@<TRIPOS>"):
-                comment = lines[i + 5].strip()        
+        return 0,1
 
-        elif line.startswith("@<TRIPOS>ATOM"):
-            for line_coord in lines[i + 1 : i + 1 + num_atom]:
-                tokens = line_coord.split()
-                atoms = tokens[1]
-                x, y, z = map(float, tokens[2:5])
-                coords.append((atoms, x, y, z))
-                charges.append(float(tokens[-1]))
 
-        elif line.startswith("@<TRIPOS>BOND"):
-            for line_bond in lines[i + 1 : i + 1 + num_bond]:
-                tokens = line_bond.split()
-                a1, a2, bond_type = tokens[1], tokens[2], tokens[3]
-                if bond_type == "1":
-                    bonds.append((a1, a2))
-                elif bond_type in ("2", "ar"):
-                    double_bonds.append((a1, a2))
-                elif bond_type == "3":
-                    triple_bonds.append((a1, a2))
-        else:
-            raise ValueError(
-                "Cannot parse chemical information without \n MOLECULE, ATOM, BOND sections."
-            )
+    @staticmethod
+    def get_coord(content : str|list) -> tuple:
+    
+        lines = read_lines(content, "mol2") if isinstance(content, str) else content
 
-    molecule = {
-        "num_atom": num_atom,
-        "num_bond": num_bond,
-        "mol_type": mol_type,
-        "charges_type": charges_type,
-        "comment": comment,
-        "coords": np.array(coords),
-        "charges": charges,
-        "bonds": bonds,
-        "double_bonds": double_bonds,
-        "triple_bonds": triple_bonds,
-    }
-    return molecule
+        if line.startswith("@<TRIPOS>ATOM"):
+                for line_coord in lines[i + 1 : i + 1 + num_atom]:
+                    tokens = line_coord.split()
+                    atoms = tokens[1]
+                    x, y, z = map(float, tokens[2:5])
+                    coords.append((atoms, x, y, z))
+                    charges.append(float(tokens[-1]))
 
+    @staticmethod
+    def get_bonds(content: str|list) -> tuple:
+
+        lines = read_lines(content, "mol2") if isinstance(content, str) else content
+        bonds, double_bonds, triple_bonds = list(), list(), list()
+            
+        for i, line in enumerate(lines): 
+            if line.startswith("@<TRIPOS>BOND"):
+                for line_bond in lines[i + 1 : i + 1 + num_bond]:
+                    tokens = line_bond.split()
+                    a1, a2, bond_type = tokens[1], tokens[2], tokens[3]
+                    if bond_type == "1":
+                        bonds.append((a1, a2))
+                    elif bond_type in ("2", "ar"):
+                        double_bonds.append((a1, a2))
+                    elif bond_type == "3":
+                        triple_bonds.append((a1, a2))
+                return bonds, double_bonds, triple_bonds
+            else:
+                raise ValueError(
+                    "Cannot parse chemical information without \n MOLECULE, ATOM, BOND sections."
+                )
+
+    @staticmethod
+    def parse_mol2(content: str|list) -> dict:
+
+        lines = read_lines(content, "mol2") if isinstance(content, str) else content
+        
+        return {
+            "num_atom": num_atom,
+            "num_bond": num_bond,
+            "mol_type": mol_type,
+            "charges_type": charges_type,
+            "comment": comment,
+            "coords": np.array(coords),
+            "charges": charges,
+            "bonds": MOL2.get_bonds(content)[0],
+            "double_bonds": MOL2.get_bonds(content)[1],
+            "triple_bonds": MOL2.get_bonds(content)[2],
+        }
 
 def parse_json(path: str):
     """
