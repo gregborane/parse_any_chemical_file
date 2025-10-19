@@ -188,6 +188,7 @@ class MOL2:
             if line.startswith("@<TRIPOS>MOLECULE"):
                 num_atom, num_bond = map(int, lines[i + 2].split()[:2])
                 return num_atom, num_bond
+        raise ValueError("No Molecule section found")
 
     @staticmethod
     def get_mol_type(content: str|list) -> list:
@@ -200,16 +201,23 @@ class MOL2:
                     return lines[i + 3].strip()
                 except (IndexError, ValueError):
                     raise ValueError(f"Error Parsing molecule type at line {i+4}")
+        raise ValueError("No MOLECULE section found")
 
     @staticmethod
-    def get_comment(content: str|list) -> tuple: 
+    def get_comment(content: str|list) -> list: 
 
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
-        if len(lines) > i + 5 and not lines[i+5].startswith("@<TRIPOS>"):
-            return lines[i + 5].strip()        
+
+        for i, line in enumerate(lines):
+            if len(lines) > i + 5 and not line.startswith("@<TRIPOS>"):
+                try:
+                    return lines[i + 5].strip()        
+                except(ValueError, IndexError):
+                    raise ValueError(f"Error Parsing comment at line {i+6}")
+        raise ValueError("No COMMENT found")
 
     @staticmethod
-    def get_charges(content: str|list) -> list:
+    def get_charges_types(content: str|list) -> list:
 
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
 
@@ -219,31 +227,39 @@ class MOL2:
                     return lines[i + 4].strip()
                 except(ValueError, IndexError):
                     raise ValueError(f"Could not find charges type at line {i+5}")
+        raise ValueError("No MOLECULE section found")
 
 
     @staticmethod
     def get_coord(content : str|list) -> tuple:
 
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
+        num_atom = MOL2.get_num_info(lines)[0]
 
-        if line.startswith("@<TRIPOS>ATOM"):
-            for line_coord in lines[i + 1 : i + 1 + num_atom]:
-                tokens = line_coord.split()
-                atoms = tokens[1]
-                x, y, z = map(float, tokens[2:5])
-                coords.append((atoms, x, y, z))
-                charges.append(float(tokens[-1]))
+        for i, line in enumerate(lines):
+            if line.startswith("@<TRIPOS>ATOM"):
+                try:
+                    a = [line.split()[1] for line in lines[i+1: num_atom]]
+                    x = [np.float64(line.split()[4]) for line in lines[i+1: i+2+num_atom]]
+                    y = [np.float64(line.split()[4]) for line in lines[i+1: i+2+num_atom]]
+                    z = [np.float64(line.split()[4]) for line in lines[i+1: i+2+num_atom]]
+                    c = [np.float64(line.split()[-1]) for line in lines[i+1: i+2+num_atom]]
+                    return a, np.array([x,y,z]), c
+                except (ValueError, IndexError):
+                    raise ValueError(f"Error parsing coordinate between lines {i+2} and {i+3+num_atom}")
+        raise ValueError("No ATOM section found")
+
 
     @staticmethod
     def get_bonds(content: str|list) -> tuple:
 
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
-
+        num_bonds = MOL2.get_num_info(lines)[1]
         bonds, double_bonds, triple_bonds = [], [], []   
 
         for i, line in enumerate(lines): 
             if line.startswith("@<TRIPOS>BOND"):
-                for line_bond in lines[i + 1 : i + 1 + num_bond]:
+                for line_bond in lines[i + 1 : i + 1 + num_bonds]:
                     tokens = line_bond.split()
                     a1, a2, bond_type = tokens[1], tokens[2], tokens[3]
                     if bond_type == "1":
@@ -254,15 +270,14 @@ class MOL2:
                         triple_bonds.append((a1, a2))
                 return bonds, double_bonds, triple_bonds
             else:
-                raise ValueError(
-                    "Cannot parse chemical information without \n MOLECULE, ATOM, BOND sections."
-                )
+                raise ValueError("Cannot parse chemical information without \n MOLECULE, ATOM, BOND sections.")
+        return bonds, double_bonds, triple_bonds
 
     @staticmethod
     def parse_mol2(content: str|list) -> dict:
 
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
-
+        
         return {
             "num_atom": num_atom,
             "num_bond": num_bond,
