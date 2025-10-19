@@ -176,52 +176,71 @@ class MOL:
 
 # %%
 class MOL2:
-            bonds, double_bonds, triple_bonds = [], [], []
-        coords, charges = [], []
-        mol_type, comment, charges_type = None, None, None
-        num_atom, num_bond = 0, 0
+            
+    coords, charges = [], []
+    
+    @staticmethod
     def get_num_info(content: str|list) -> tuple:
+        
+        lines = read_lines(content, "mol2") if isinstance(content, str) else content
+
         for i, line in enumerate(lines):
             if line.startswith("@<TRIPOS>MOLECULE"):
                 num_atom, num_bond = map(int, lines[i + 2].split()[:2])
-                mol_type = lines[i + 3].strip()
-                charges_type = lines[i + 4].strip()
-                if len(lines) > i + 5 and not lines[i+5].startswith("@<TRIPOS>"):
-                    comment = lines[i + 5].strip()        
-    
+                return num_atom, num_bond
+
+    @staticmethod
+    def get_mol_type(content: str|list) -> list:
+
+        lines = read_lines(content, "mol2") if isinstance(content, str) else content
+
+        for i, line in enumerate(lines):
+            if line.startswith("@<TRIPOS>MOLECULE"):
+                try :
+                    return lines[i + 3].strip()
+                except (IndexError, ValueError):
+                    raise ValueError(f"Error Parsing molecule type at line {i+4}")
+
     @staticmethod
     def get_comment(content: str|list) -> tuple: 
-        
+
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
-        return 0,1
+        if len(lines) > i + 5 and not lines[i+5].startswith("@<TRIPOS>"):
+            return lines[i + 5].strip()        
 
     @staticmethod
-    def get_charges(content: str|list) -> tuple:
+    def get_charges(content: str|list) -> list:
 
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
 
-        return 0,1
+        for i, line in enumerate(lines):
+            if line.startswith("@<TRIPOS>MOLECULE"):
+                try :
+                    return lines[i + 4].strip()
+                except(ValueError, IndexError):
+                    raise ValueError(f"Could not find charges type at line {i+5}")
 
 
     @staticmethod
     def get_coord(content : str|list) -> tuple:
-    
+
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
 
         if line.startswith("@<TRIPOS>ATOM"):
-                for line_coord in lines[i + 1 : i + 1 + num_atom]:
-                    tokens = line_coord.split()
-                    atoms = tokens[1]
-                    x, y, z = map(float, tokens[2:5])
-                    coords.append((atoms, x, y, z))
-                    charges.append(float(tokens[-1]))
+            for line_coord in lines[i + 1 : i + 1 + num_atom]:
+                tokens = line_coord.split()
+                atoms = tokens[1]
+                x, y, z = map(float, tokens[2:5])
+                coords.append((atoms, x, y, z))
+                charges.append(float(tokens[-1]))
 
     @staticmethod
     def get_bonds(content: str|list) -> tuple:
 
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
-        bonds, double_bonds, triple_bonds = list(), list(), list()
-            
+
+        bonds, double_bonds, triple_bonds = [], [], []   
+
         for i, line in enumerate(lines): 
             if line.startswith("@<TRIPOS>BOND"):
                 for line_bond in lines[i + 1 : i + 1 + num_bond]:
@@ -243,7 +262,7 @@ class MOL2:
     def parse_mol2(content: str|list) -> dict:
 
         lines = read_lines(content, "mol2") if isinstance(content, str) else content
-        
+
         return {
             "num_atom": num_atom,
             "num_bond": num_bond,
@@ -450,11 +469,11 @@ def parse_smi(path : str) -> dict:
 
     with open(path, "r") as smi:
         line = smi.readlines()[0]
-    
+
     molobject = Chem.MolFromSmiles(line)
     molecule = {
-            "molecule"  : line,
-            "MolObject" : molobject
+        "molecule"  : line,
+        "MolObject" : molobject
     }
 
     return molecule
@@ -469,8 +488,8 @@ def parse_inchi(path : str) -> dict:
 
     molobject = Chem.inchi.MolFromInchi(line)
     molecule = {
-            "text"      : line,
-            "molobject" : molobject
+        "text"      : line,
+        "molobject" : molobject
     }
 
     return molecule
@@ -480,9 +499,9 @@ class ReadGaussian:
 
     @static
     def read_lines():
-        
+
         Get Data
-       
+
         if test_extensions(path, "log"): 
             with open(path,"r") as gaussian_file:
                     lines = gaussian_file.readlines()
@@ -490,9 +509,9 @@ class ReadGaussian:
         return lines
 
     def extract_coordinates():
-      
+
         Obtain Atoms coordinates and atomic number
-     
+
         lines = read_lines()
         num_atom, geometry_indice = None, None
 
@@ -501,10 +520,10 @@ class ReadGaussian:
 
             if "NAtoms=" in split_line:
                 num_atom = int(line.split()[1])
-            
+
             if "standard" in split_line and "orientation" in split_line:
                 geometry_indice = i
-        
+
         if geometry_indice is None :
             raise ValueError("No Coordinates Found")
 
@@ -518,16 +537,16 @@ class ReadGaussian:
         y = [float(line.split()[4]) for line in lines[start_coord: end_coord]]
         z = [float(line.split()[5]) for line in lines[start_coord: end_coord]]
         atom = [float(line.split()[1]) for line in lines[start_coord: end_coord]]
-   
+
         premol = np.array([atom, x, y, z])
-    
+
         return premol
 
     def extract_charges(path: str):
-       
+
         Obtain partial charges from NBO calculations
         Mulliken, 
-      
+
 
         lines = read_lines(path, "log")
         indice_mulliken = None, 
@@ -543,9 +562,9 @@ class ReadGaussian:
         return "bite"
 
     def extract_bond_order(path: str):
-     
+
         Obtain bond order from NBO calculation
-    
+
         return 'bite bite'
 
 """
