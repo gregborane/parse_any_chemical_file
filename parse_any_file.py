@@ -96,13 +96,17 @@ class XYZ:
 
         lines = read_lines(content, XYZ.file_extension)
 
+        num_atom = XYZ.get_num_atoms(lines)
+        comment = XYZ.get_comment(lines)
+        atoms, coords = XYZ.get_coord(lines)
+
         return {
-            "num_atom" : XYZ.get_num_atoms(lines),
+            "num_atom" : num_atom,
 
-            "comment" : XYZ.get_comment(lines),
+            "comment" : comment,
 
-            "atoms" : XYZ.get_coord(lines)[0],
-            "coords" : XYZ.get_coord(lines)[1],
+            "atoms" : atoms,
+            "coords" : coords,
         }
 
 # %%
@@ -219,18 +223,24 @@ class MOL:
     def parse_mol(content: str|list) -> dict:
     
         lines = read_lines(content, MOL.file_extension) if isinstance(content, str) else content
-        
-        return {
-            "num_atom"     : MOL.get_num_info(lines)[0],
 
-            "properties"   : MOL.get_information(lines),
+        num_atom, num_bonds = MOL.get_num_info(lines)
+        properties = MOL.get_information(lines)
+        bonds, double_bonds, triple_bonds = MOL.get_information(lines) 
+        atoms, coord = MOL.get_coord(lines)
+
+        return {
+            "num_atom"     : num_atom,
+            "num_bonds"    : num_bonds,
+
+            "properties"   : properties,
             
-            "bonds"        : MOL.get_bonds(lines)[0],
-            "double_bonds" : MOL.get_bonds(lines)[1],
-            "triple_bonds" : MOL.get_bonds(lines)[2],
+            "bonds"        : bonds,
+            "double_bonds" : double_bonds,
+            "triple_bonds" : triple_bonds,
             
-            "atoms"        : MOL.get_coord(lines)[0],
-            "coord"        : MOL.get_coord(lines)[1],
+            "atoms"        : atoms,
+            "coord"        : coord,
         }
 
 # %%
@@ -367,24 +377,31 @@ class MOL2:
     def parse_mol2(content: str|list) -> dict:
 
         lines = read_lines(content, MOL2.file_extension) if isinstance(content, str) else content
-        
+
+        num_atoms, num_bonds = MOL2.get_num_info(lines) 
+        mol_type = MOL2.get_mol_type(content)
+        charges_type = MOL2.get_charges_types(lines)
+        comment = MOL2.get_comment(lines)
+        atoms, coords, charges = MOL2.get_coord(lines)
+        bonds, double_bonds, triple_bonds = MOL2.get_bonds(lines)
+
         return {
-            "num_atom"     : MOL2.get_num_info(lines)[0],
-            "num_bond"     : MOL2.get_num_info(lines)[1],
+            "num_atom"     : num_atoms,
+            "num_bond"     : num_bonds,
 
-            "mol_type"     : MOL2.get_mol_type(lines)[2],
+            "mol_type"     : mol_type,
 
-            "charges_type" : MOL2.get_charges_types(lines)[2],
+            "charges_type" : charges_type,
 
-            "comment"      : MOL2.get_comment(lines),
+            "comment"      : comment,
 
-            "atoms"        : MOL2.get_coord(lines)[0],
-            "coords"       : MOL2.get_coord(lines)[1],
-            "charges"      : MOL2.get_coord(lines)[2],
+            "atoms"        : atoms,
+            "coords"       : coords,
+            "charges"      : charges,
 
-            "bonds"        : MOL2.get_bonds(lines)[0],
-            "double_bonds" : MOL2.get_bonds(lines)[1],
-            "triple_bonds" : MOL2.get_bonds(lines)[2],
+            "bonds"        : bonds,
+            "double_bonds" : double_bonds,
+            "triple_bonds" : triple_bonds,
         }
 
 # %%
@@ -509,9 +526,6 @@ class SDF:
 
 # %%
 class CML:
-
-    @staticmethod
-    def parse_cml(path: str) -> dict:
         """
         Parse cml file which are a subclass of xml files.
 
@@ -530,75 +544,109 @@ class CML:
         More over, this parsing is built over cml.org schematic.
 
         """
+
+        # Magic numbers = 
         ns = {"cml": "http://www.xml-cml.org/schema"}
-        tree = ET.parse(path)
-        root = tree.getroot()
+        
+        @staticmethod
+        def read_file(content: str):
+            if isinstance(content, str):
+                tree = ET.parse(content)
+                return tree.getroot()
+            else: 
+                raise TypeError("No valid type input")
 
-        atoms = [atom.get("elementType") for atom in root.findall(".//cml:atom", ns)]
+        @staticmethod
+        def get_coord(content: str) -> tuple: 
 
-        # Element's coordinate can be given in either two dimensions or three dimensions.
-        try:
-            x = [atom.get("x3") for atom in root.findall(".//cml:atom", ns)]
-            y = [atom.get("y3") for atom in root.findall(".//cml:atom", ns)]
-            z = [atom.get("z3") for atom in root.findall(".//cml:atom", ns)]
+            root = CML.read_file(content)
+            
+            try:
+                atoms = [atom.get("elementType") for atom in root.findall(".//cml:atom", CML.ns)]
+                num_atom = len(atoms)
+                x = [atom.get("x3") for atom in root.findall(".//cml:atom", CML.ns)]
+                y = [atom.get("y3") for atom in root.findall(".//cml:atom", CML.ns)]
+                z = [atom.get("z3") for atom in root.findall(".//cml:atom", CML.ns)]
+                return atoms, num_atom, np.array([x, y, z]) 
+            except ValueError:
+                atoms = [atom.get("elementType") for atom in root.findall(".//cml:atom", CML.ns)]
+                num_atom = len(atoms)
+                x = [atom.get("x3") for atom in root.findall(".//cml:atom", CML.ns)]
+                x = [atom.get("x2") for atom in root.findall(".//cml:atom", CML.ns)]
+                y = [atom.get("y2") for atom in root.findall(".//cml:atom", CML.ns)]
+                return atoms, num_atom, np.array([x, y])
+            finally:
+                raise ValueError("No atoms section, can't parse file")
+        
+        @staticmethod
+        def get_bonds(content: str) -> tuple:
+        
+            root = CML.read_file(content)
+            bonds, double_bonds, triple_bonds = list(), list(), list()
 
-        finally:
-            x = [atom.get("x2") for atom in root.findall(".//cml:atom", ns)]
-            y = [atom.get("y2") for atom in root.findall(".//cml:atom", ns)]
+            for atom_bonds in root.findall(".//cml:bonds", CML.ns):
+                for key in ["atomRefs", "atomRefs2", "atomRefs3", "atomRefs4"]:
 
-        premol = np.array([atoms, x, y, z])
-        num_atom = len(atoms)
+                    # atomRefs# can be used differentyly depending on the atom si it is
+                    # a necessity to test them all, might lead to an error
+                    try:
+                        if atom_bonds.get("order") == "1" and atom_bonds.get(key):
+                            bond = str(atom_bonds.get(key))
+                            bond_atom = bond.split(" ")
+                            parsed = [int(bond_at.lstrip("a")) - 1 for bond_at in bond_atom]
+                            bonds.append(tuple(parsed))
+                        elif atom_bonds.get("order") == "2" and atom_bonds.get(key):
+                            bond = str(atom_bonds.get(key))
+                            bond_atom = bond.split(" ")
+                            parsed = [int(bond_at.lstrip("a")) - 1 for bond_at in bond_atom]
+                            double_bonds.append(tuple(parsed))
+                        elif atom_bonds.get("order") == "3" and atom_bonds.get(key):
+                            bond = str(atom_bonds.get(key))
+                            bond_atom = bond.split(" ")
+                            parsed = [int(bond_at.lstrip("a")) - 1 for bond_at in bond_atom]
+                            triple_bonds.append(tuple(parsed))
+                    finally:
+                        pass
+            num_bonds = len(bonds) + len(double_bonds) + len(triple_bonds)
+            return bonds, double_bonds, triple_bonds, num_bonds
 
-        bonds, double_bonds, triple_bonds = list(), list(), list()
+        @staticmethod
+        def get_properties(content: str) -> list :
+            
+            root = CML.read_file(content)
+            properties = list()
 
-        for atom_bonds in root.findall(".//cml:bonds", ns):
-            for key in ["atomRefs", "atomRefs2", "atomRefs3", "atomRefs4"]:
+            for prop in root.findall(".//cml:property", CML.ns):
+                title = prop.get("title")
+                scalar = prop.find("cml:scalar", CML.ns)
+                if scalar is not None:
+                    value = scalar.text
+                    property = {title: value}
+                else:
+                    continue
+                properties.append(property)
+            return properties
 
-                # atomRefs# can be used differentyly depending on the atom si it is
-                # a necessity to test them all, might lead to an error
-                try:
-                    if atom_bonds.get("order") == "1" and atom_bonds.get(key):
-                        bond = str(atom_bonds.get(key))
-                        bond_atom = bond.split(" ")
-                        parsed = [int(bond_at.lstrip("a")) - 1 for bond_at in bond_atom]
-                        bonds.append(tuple(parsed))
+        @staticmethod
+        def parse_cml(content: str) -> dict:
 
-                    elif atom_bonds.get("order") == "2" and atom_bonds.get(key):
-                        bond = str(atom_bonds.get(key))
-                        bond_atom = bond.split(" ")
-                        parsed = [int(bond_at.lstrip("a")) - 1 for bond_at in bond_atom]
-                        double_bonds.append(tuple(parsed))
+            atoms, num_atoms, coord = CML.get_coord(content)
+            bonds, double_bonds, triple_bonds, num_bonds = CML.get_bonds(content)    
+            properties = CML.get_properties(content)    
 
-                    elif atom_bonds.get("order") == "3" and atom_bonds.get(key):
-                        bond = str(atom_bonds.get(key))
-                        bond_atom = bond.split(" ")
-                        parsed = [int(bond_at.lstrip("a")) - 1 for bond_at in bond_atom]
-                        triple_bonds.append(tuple(parsed))
+            return {
+                "atoms"        : atoms,
+                "num_atom"     : num_atoms,
 
-                finally:
-                    pass
-
-        properties = list()
-        for prop in root.findall(".//cml:property", ns):
-            title = prop.get("title")
-            scalar = prop.find("cml:scalar", ns)
-            if scalar is not None:
-                value = scalar.text
-                property = {title: value}
-            else:
-                continue
-            properties.append(property)
-
-        molecule = {
-            "num_atom": num_atom,
-            "properties": properties,
-            "coord": premol,
-            "bonds": bonds,
-            "double_bonds": double_bonds,
-            "triple_bonds": triple_bonds,
-        }
-
-        return molecule
+                "properties"   : properties,
+                
+                "coord"        : coord,
+                
+                "num_bonds"    : num_bonds,
+                "bonds"        : bonds,
+                "double_bonds" : double_bonds,
+                "triple_bonds" : triple_bonds,
+            }
 
 # %%
 def parse_smi(path : str) -> dict:
@@ -634,25 +682,14 @@ def parse_inchi(path : str) -> dict:
 
     return molecule
 
-"""
-class Gaussian:
+class GAUSSIAN:
 
-    @static
-    def read_lines():
+    file_extension = "log"
 
-        Get Data
+    @staticmethod
+    def extract_coordinates(content: str):
 
-        if test_extensions(path, "log"): 
-            with open(path,"r") as gaussian_file:
-                    lines = gaussian_file.readlines()
-                    lines = lines
-        return lines
-
-    def extract_coordinates():
-
-        Obtain Atoms coordinates and atomic number
-
-        lines = read_lines()
+        lines = read_lines(content, GAUSSIAN.file_extension)
         num_atom, geometry_indice = None, None
 
         for i, line in enumerate(lines[::-1]):
@@ -682,29 +719,25 @@ class Gaussian:
 
         return premol
 
+    @staticmethod
     def extract_charges(path: str):
 
-        Obtain partial charges from NBO calculations
-        Mulliken, 
-
-
         lines = read_lines(path, "log")
-        indice_mulliken = None, 
+        indice_mulliken = None 
 
-        for i, lines in enumerate(lines[::-1]):
+        for i, line in enumerate(lines[::-1]):
             split_line = line.split()
 
-            if "Mulliken" in lines.split() and len(lines.split()) == 2:
+            if "Mulliken" in line.split() and len(line.split()) == 2:
                 indice_mulliken = i
 
-            if "APT" in lines.split() and len(lines.split()) == 2:
+            if "APT" in line.split() and len(line.split()) == 2:
+                return  line
 
-        return "bite"
+        return 
 
     def extract_bond_order(path: str):
-
-        Obtain bond order from NBO calculation
-
+        
         return 'bite bite'
 
 """
