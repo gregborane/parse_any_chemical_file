@@ -4,6 +4,7 @@ import json
 import yaml
 import xml.etree.ElementTree as ET
 from rdkit import Chem
+import re
 
 def check_len(molecule: dict) -> bool:
     
@@ -683,61 +684,119 @@ def parse_inchi(path : str) -> dict:
     return molecule
 
 class GAUSSIAN:
+    """
+    Valid inputs for functions:
 
+        - absolute path to the file 
+        - ""file.readlines()"" object
+
+    Gaussian file contains the lastest optimised calculation at the end of the file.
+    Hence, iterations are done from bottom to top.
+    """
+
+
+    # Magic numbers = 
+    ## Global
     file_extension = "log"
+    
+    ## Pattern for file navigation
+    regex_mulliken = re.compile(r"Mulliken charges:")
+    regex_apt      = re.compile(r"APT charges:")
+    
+    ## Inside sections
+    geometry_skip_lines = 5
+    mulliken_skip_lines = 2
+    apt_skip_lines      = 2
 
     @staticmethod
-    def extract_coordinates(content: str):
+    def extract_num_info(content: str|list) -> int:
 
         lines = read_lines(content, GAUSSIAN.file_extension)
-        num_atom, geometry_indice = None, None
+        num_atom = None
 
-        for i, line in enumerate(lines[::-1]):
+        for line in lines[::-1]:
             split_line = line.split()
 
             if "NAtoms=" in split_line:
                 num_atom = int(line.split()[1])
-
-            if "standard" in split_line and "orientation" in split_line:
-                geometry_indice = i
-
-        if geometry_indice is None :
-            raise ValueError("No Coordinates Found")
-
+        
         if num_atom is None:
-            raise ValueError("Number of Atom not Found")
-
-        start_coord = len(lines) - geometry_indice + 5
-        end_coord = start_coord + num_atom
-
-        x = [float(line.split()[3]) for line in lines[start_coord: end_coord]]
-        y = [float(line.split()[4]) for line in lines[start_coord: end_coord]]
-        z = [float(line.split()[5]) for line in lines[start_coord: end_coord]]
-        atom = [float(line.split()[1]) for line in lines[start_coord: end_coord]]
-
-        premol = np.array([atom, x, y, z])
-
-        return premol
+            raise ValueError("File does not contains atom numbers")
+        
+        return num_atom
 
     @staticmethod
-    def extract_charges(path: str):
+    def extract_coordinates(content: str|list) -> tuple:
 
-        lines = read_lines(path, "log")
-        indice_mulliken = None 
+        lines = read_lines(content, GAUSSIAN.file_extension)
+        num_atom = GAUSSIAN.extract_num_info(lines)
+        geometry_indice = None
 
         for i, line in enumerate(lines[::-1]):
             split_line = line.split()
 
-            if "Mulliken" in line.split() and len(line.split()) == 2:
+            if "standard" in split_line and "orientation" in split_line:
+                geometry_indice = i
+                break
+
+        if geometry_indice is None :
+            raise ValueError("No Coordinates Found")
+
+        start_coord = len(lines) - geometry_indice + GAUSSIAN.geometry_skip_lines
+        end_coord = start_coord + num_atom + 1 # include all atoms
+
+        x = [float(line.split()[3]) for line in lines[start_coord: end_coord]]
+        y = [float(line.split()[4]) for line in lines[start_coord: end_coord]]
+        z = [float(line.split()[5]) for line in lines[start_coord: end_coord]]
+        a = [float(line.split()[1]) for line in lines[start_coord: end_coord]]
+        coord = np.array([x, y, z])
+
+        return a, coord
+
+    @staticmethod
+    def extract_mulliken_charges(path: str) -> list:
+
+        lines = read_lines(path, "log")
+        indice_mulliken = None 
+        num_atom = GAUSSIAN.extract_num_info(lines)
+
+        for i, line in enumerate(lines[::-1]):
+
+            if GAUSSIAN.regex_mulliken.match(line):
                 indice_mulliken = i
-
-            if "APT" in line.split() and len(line.split()) == 2:
-                return  line
-
-        return 
-
-    def extract_bond_order(path: str):
+                break
         
-        return 'bite bite'
+        if indice_mulliken is None:
+            raise ValueError("No Mulliken charges found in file")
 
-"""
+        start_charges = len(lines) - indice_mulliken + GAUSSIAN.mulliken_skip_lines
+        end_charges = start_charges + num_atom + 1 # include all atoms
+
+        return [np.float64(line) for line in lines[start_charges:end_charges]]
+    
+    @staticmethod
+    def extract_apt_charges(content: str|list) -> list:
+
+        lines = read_lines(content, GAUSSIAN.file_extension)
+        num_atom = GAUSSIAN.extract_num_info(lines)
+        indice_apt = None
+
+        for i, line in enumerate(lines):
+            if "APT" in line.split() and len(line.split()) == 2:
+                indice_apt = i
+                break 
+        
+        if indice_apt is None:
+            raise ValueError("No APT charges could not be found")
+
+        start_charges = len(lines) - indice_apt + GAUSSIAN.apt_skip_lines
+        end_charges = start_charges + num_atom + 1 # include all atoms
+        
+        return [np.float64(line) for line in lines[start_charges:end_charges]]
+        
+    @staticmethod
+    def extract_bond_order(content: str|list):
+         
+        return 'do not have this in my examples files yet'
+
+
