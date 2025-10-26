@@ -1,0 +1,45 @@
+echo
+
+start ethanol_opt_freq
+
+memory 4096 mb
+
+title "B3LYP-D3/def2-svp(ecp): optimization + freq"
+charge 0
+
+# input: hand-drawn, no conformer search
+geometry 
+ C                 -1.07824429   -0.05725191    0.00000000
+ H                 -0.72158987   -1.06606191    0.00000000
+ H                 -0.72157145    0.44714628   -0.87365150
+ H                 -2.14824429   -0.05723872    0.00000000
+ C                 -0.56490207    0.66870437    1.25740497
+ H                 -0.91995842    1.67807746    1.25642745
+ H                  0.50509612    0.66699768    1.25838372
+ O                 -1.04371032   -0.00388803    2.42499314
+ H                 -0.72391963    0.44832544    3.20910850
+end
+
+basis
+  * library def2-svp
+end
+
+dft
+  xc b3lyp
+  mult 1
+  disp vdw 3
+  grid fine
+  direct
+  noio
+end
+
+set driver:linopt 0
+driver
+  tight
+  maxiter 500
+end
+
+task dft optimize
+task dft freq
+
+

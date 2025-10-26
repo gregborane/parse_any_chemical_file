@@ -1,5 +1,21 @@
 # Parse any chemical file
 
+## Reasons
+
+I am tired of parsing manually files after each project so here it is a parser for file type.
+
+Long term project is to contain all extensions with the bare minimum extractions informations : 
+
+- Atoms,  
+- Coordinates,
+- Bonds,
+- Charges
+
+Containing :
+
+- Auto detection of extensions
+- Possibility to choose which information to extract from the file (default all) 
+
 ## dependencies
 
 ```
@@ -10,48 +26,40 @@ This repo is built in order to provide a python file to parse most of molecular 
 
 Format supported : 
 
-| Format        | Description                                                               | Is done |
-| --------------|---------------------------------------------------------------------------|----------
-|.mol           | MDL Molfile                                                               | Y       |
-|.sdf           | Structure Data File (molecule sets, still small molecules)                | Y       |
-|.mol2          | Tripos Mol2                                                               | Y       |
-|.cml           | Chemical Markup Language                                                  | Y       |
-|.xyz           | Cartesian coordinates                                                     | Y       |
-|.mae           | Maestro small-molecule format                                             | N       |
-|.sd            | SDfile variant                                                            | N       |
-|.gjf / .com    | Gaussian input (geometry of one molecule)                                 | N       |
-|.chk           | Gaussian checkpoint (molecular state data)                                | N       |
-|.fchk          | Gaussian formatted checkpoint                                             | N       |
-|.cube          | Gaussian volumetric data tied to a single molecule                        | N       |
-|.mop           | MOPAC input                                                               | N       |
-|.mopout        | MOPAC output                                                              | N       |
-|.pdbqt         | AutoDock input ligand format (derived from PDB, for small molecules only) | N       |
-|.pqr           | PDB with charges and radii (often for small molecules)                    | N       |
-|.inchi         | IUPAC InChI string saved as file                                          | Y       |
-|.smiles / .smi | SMILES line notation file                                                 | Y       |
-|.json          | chem-specific schemas like ChemJSON or PubChem JSON for molecules)        | Y       |
-|.yaml          | (used in some molecular toolkits for small-molecule storage)              | Y       |
-|.mrv           | ChemAxon Marvin format                                                    | N       |
-|.cdx / .cdxml  | ChemDraw binary and XML molecule formats                                  | N       |
-|.rxn           | can contain one molecule in some case                                     | N       |
+| Format              | Description                                                               | Is done |
+|---------------------|---------------------------------------------------------------------------|----------
+|.mol                 | MDL Molfile                                                               | Y       |
+|.sdf                 | Structure Data File (molecule sets, still small molecules)                | Y       |
+|.mol2                | Tripos Mol2                                                               | Y       |
+|.cml                 | Chemical Markup Language                                                  | Y       |
+|.xyz                 | Cartesian coordinates                                                     | Y       |
+|.mae                 | Maestro small-molecule format                                             | N       |
+|.sd                  | SDfile variant                                                            | N       |
+|.gjf / .com/ .out    | Gaussian input (geometry of one molecule)                                 | ~       |
+|.cube                | Gaussian volumetric data tied to a single molecule                        | N       |
+|.mop                 | MOPAC input                                                               | N       |
+|.mopout              | MOPAC output                                                              | N       |
+|.pdbqt               | AutoDock input ligand format (derived from PDB, for small molecules only) | N       |
+|.pqr                 | PDB with charges and radii (often for small molecules)                    | N       |
+|.inchi               | IUPAC InChI string saved as file                                          | Y       |
+|.smiles / .smi       | SMILES line notation file                                                 | Y       |
+|.json                | chem-specific schemas like ChemJSON or PubChem JSON for molecules)        | Y       |
+|.yaml                | (used in some molecular toolkits for small-molecule storage)              | Y       |
+|.mrv                 | ChemAxon Marvin format                                                    | N       |
+|.cdx / .cdxml        | ChemDraw binary and XML molecule formats                                  | N       |
 
 ## 3 Steps will be used to return the final object :
 
 ### Detection of the extension
 
 First using a rule based (RB).\
-NOT YET Later using a simple Machine Learning (ML) model to speed up proccess and code readability.
 
 ### Parsing the data
 
-RB or ML will apply the different parsing function, which will return those numpy array : 4*number_of_atoms
-
 If it is not a text based represensation like smiles or inchi
 
-| Atom | X_Coord | Y_Coord | Z_Coord | 
-|------|---------|---------|---------|
-
-Each will parsing function will be coupled with a lenght detector to check all molecules' atom have the expected lenght
+Most of the information will be extracted and will be relative to a file.
+Check docs for each extension extraction.
 
 ### Conversion to rdkit object
 
@@ -62,10 +70,6 @@ RDKIT is one of the most used open sourced chemical package avaialble, all molec
 A dict with : 
 
 {\
-"Bonds"       : (if present take indices in file, then determined),\
-"Double"      : (if present take indices in file, then determined),\
-"Triple"      : (if present take indices in file, then determined),\
-"Properties"  : dict(properties found in the file if any),\
-"Coordinates" : np.ndarray(atoms, coordX, coordY, coordZ),\
-"RDKITMol"    : rdkit.Chem.Mol\
+"Information Extracted",\
+"RDKIT_object",\
 }
