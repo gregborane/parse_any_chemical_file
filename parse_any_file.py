@@ -2,12 +2,12 @@
 import numpy as np
 import json
 import yaml
+import tomllib
 import xml.etree.ElementTree as ET
 from rdkit import Chem
 import re
 
 def check_len(molecule: dict) -> bool:
-    
     if molecule is not None:
         return True
 
@@ -36,7 +36,7 @@ class XYZ:
 
         - direct path to the file 
         - ""readlines"" or list if same building is used
-    
+ 
     """
 
     # Magic numbers =
@@ -46,7 +46,7 @@ class XYZ:
     x_i = 1
     y_i = 2
     z_i = 3
-    
+
     ## sections
     comment_i  = 1
     num_atom_i = 0
@@ -55,7 +55,7 @@ class XYZ:
 
     @staticmethod
     def get_num_atoms(content : str|list) -> int:
-        
+
         lines = read_lines(content, XYZ.file_extension)
 
         try:
@@ -67,7 +67,7 @@ class XYZ:
 
     @staticmethod
     def get_comment(content : str|list) -> str:
-        
+
         lines = read_lines(content, "xyz") 
         try:
             return lines[XYZ.comment_i]
@@ -93,13 +93,17 @@ class XYZ:
             )
 
     @staticmethod
-    def parse_xyz(content: str|list) -> dict:
+    def parse_xyz(content: str|list,
+                  b_natom  : bool = True,
+                  b_comment: bool = True,
+                  b_coord  : bool = True,
+                  )-> dict:
 
         lines = read_lines(content, XYZ.file_extension)
 
-        num_atom = XYZ.get_num_atoms(lines)
-        comment = XYZ.get_comment(lines)
-        atoms, coords = XYZ.get_coord(lines)
+        num_atom = XYZ.get_num_atoms(lines) if b_natom else None
+        comment = XYZ.get_comment(lines) if b_comment else None
+        atoms, coords = XYZ.get_coord(lines) if b_coord else None, None
 
         return {
             "num_atom" : num_atom,
@@ -132,7 +136,7 @@ class MOL:
     num_i = 3
     file_extension = "mol"
     coord_i = 4
-    
+
     @staticmethod
     def get_num_info(content: str|list) -> tuple:
  
@@ -143,7 +147,7 @@ class MOL:
                 raise ValueError(
                 "V3000 formatting is not supported"
                 )
-                
+
             counts = lines[MOL.num_i].split()
             num_atom = int(counts[MOL.atom_i])
             num_bonds = int(counts[MOL.bond_i])
@@ -155,10 +159,10 @@ class MOL:
 
     @staticmethod
     def get_coord(content: str|list) -> tuple:
-        
+
         lines = read_lines(content, MOL.file_extension)
         num_atom = MOL.get_num_info(lines)[0]
-        
+
         try:
             a = [line.split()[MOL.a_i] for line in lines[MOL.coord_i:MOL.coord_i+num_atom]]
             x = [line.split()[MOL.x_i] for line in lines[MOL.coord_i:MOL.coord_i+num_atom]]
@@ -175,7 +179,7 @@ class MOL:
 
         lines = read_lines(content, MOL.file_extension) 
         num_atom, num_bonds = MOL.get_num_info(content) 
-        
+
         try:
             bonds, double_bonds, triple_bonds = [], [], []
             for line_bond in lines[MOL.coord_i+num_atom:MOL.coord_i+num_atom+num_bonds]:
@@ -202,10 +206,10 @@ class MOL:
 
     @staticmethod
     def get_information(content: str|list) -> dict:
-    
+
         lines = read_lines(content, MOL.file_extension) 
         num_atom, num_bonds = MOL.get_num_info(content)
-        
+
         try:
             properties = {}
             for line in lines[4+num_atom+num_bonds:]:
@@ -221,39 +225,44 @@ class MOL:
             )
 
     @staticmethod
-    def parse_mol(content: str|list) -> dict:
-    
+    def parse_mol(content: str|list,
+                  b_nums : bool = True,
+                  b_prop : bool = True,
+                  b_bonds: bool = True,
+                  b_coord: bool = True,
+                  ) -> dict:
+
         lines = read_lines(content, MOL.file_extension) if isinstance(content, str) else content
 
-        num_atom, num_bonds = MOL.get_num_info(lines)
-        properties = MOL.get_information(lines)
-        bonds, double_bonds, triple_bonds = MOL.get_information(lines) 
-        atoms, coord = MOL.get_coord(lines)
+        num_atom, num_bonds = MOL.get_num_info(lines) if b_nums else None, None
+        properties = MOL.get_information(lines) if b_prop else None
+        bonds, double_bonds, triple_bonds = MOL.get_information(lines) if b_bonds else None, None, None
+        atoms, coord = MOL.get_coord(lines) if b_coord else None, None
 
         return {
             "num_atom"     : num_atom,
             "num_bonds"    : num_bonds,
 
             "properties"   : properties,
-            
+
             "bonds"        : bonds,
             "double_bonds" : double_bonds,
             "triple_bonds" : triple_bonds,
-            
+
             "atoms"        : atoms,
             "coord"        : coord,
         }
 
 # %%
 class MOL2:
-            
-    # Magic numbers = 
+ 
+    # Magic numbers =
     x_i = 2
     y_i = 3
     z_i = 4
     a_i = 1
-    c_i = -1 
-    
+    c_i = -1
+ 
     type_i = 3
     atom_bond_num_i = 2
     comment_i = 5
@@ -375,16 +384,23 @@ class MOL2:
         return bonds, double_bonds, triple_bonds
 
     @staticmethod
-    def parse_mol2(content: str|list) -> dict:
+    def parse_mol2(content: str|list,
+                   b_nums    : bool = True,
+                   b_tmol    : bool = True,
+                   b_tcharges: bool = True,
+                   b_com     : bool = True,
+                   b_coord   : bool = True,
+                   b_bonds   : bool = True,
+                   ) -> dict:
 
         lines = read_lines(content, MOL2.file_extension) if isinstance(content, str) else content
 
-        num_atoms, num_bonds = MOL2.get_num_info(lines) 
-        mol_type = MOL2.get_mol_type(content)
-        charges_type = MOL2.get_charges_types(lines)
-        comment = MOL2.get_comment(lines)
-        atoms, coords, charges = MOL2.get_coord(lines)
-        bonds, double_bonds, triple_bonds = MOL2.get_bonds(lines)
+        num_atoms, num_bonds = MOL2.get_num_info(lines) if b_nums else None, None
+        mol_type = MOL2.get_mol_type(content) if b_tmol else None
+        charges_type = MOL2.get_charges_types(lines) if b_tcharges else None
+        comment = MOL2.get_comment(lines) if b_com else None
+        atoms, coords, charges = MOL2.get_coord(lines) if b_coord else None, None, None
+        bonds, double_bonds, triple_bonds = MOL2.get_bonds(lines) if b_bonds else None, None, None
 
         return {
             "num_atom"     : num_atoms,
@@ -413,9 +429,7 @@ def parse_json(path: str):
     """
 
     with open(path, "r") as file:
-        data = json.load(file)
-
-    return data
+        return json.load(file)
 
 # %%
 def parse_yaml(path: str):
@@ -425,9 +439,16 @@ def parse_yaml(path: str):
     """
 
     with open(path, "r") as file:
-        data = yaml.safe_load_all(file)
+        return yaml.safe_load_all(file)
 
-    return data
+# %%
+def parse_toml(path: str):
+    """
+    TOML file do not hě systematic representation.
+    So they are just parsed using built in function.
+    """
+    with open(path, "rb") as file:
+        return tomllib.load(file)
 
 # %%
 class SDF:
@@ -436,7 +457,7 @@ class SDF:
         - Absolute path to file
         - List of read().strip() outputs
     """
-    
+
     file_extension = "sdf"
 
     @staticmethod
@@ -450,8 +471,6 @@ class SDF:
                 raise ValueError(f"File is not {extension}")
         elif isinstance(content, list):
             return content
-        else:
-            raise TypeError("Input invalid Type")
 
     @staticmethod
     def get_num_info(content: str|list) -> list:
@@ -478,7 +497,7 @@ class SDF:
             else:
                 mol_properties.append([])
         return mol_properties
-    
+
     @staticmethod
     def get_coord(content: str|list) -> list:
         blocks = SDF.parse_sdf(content)
@@ -519,7 +538,11 @@ class SDF:
         for block in blocks:
             lines = [l for l in block.strip().splitlines() if l.strip()]
             if lines is not None:
-                molecule = MOL.parse_mol(lines)
+                molecule = MOL.parse_mol(lines,
+                                         b_nums=True,
+                                         b_bonds=True,
+                                         b_coord=True,
+                                         b_prop=True)
                 molecules.append(molecule)
             else:                             
                 molecules.append([])
@@ -548,20 +571,18 @@ class CML:
 
         # Magic numbers = 
         ns = {"cml": "http://www.xml-cml.org/schema"}
-        
+
         @staticmethod
         def read_file(content: str):
             if isinstance(content, str):
                 tree = ET.parse(content)
                 return tree.getroot()
-            else: 
-                raise TypeError("No valid type input")
 
         @staticmethod
         def get_coord(content: str) -> tuple: 
 
             root = CML.read_file(content)
-            
+
             try:
                 atoms = [atom.get("elementType") for atom in root.findall(".//cml:atom", CML.ns)]
                 num_atom = len(atoms)
@@ -578,10 +599,10 @@ class CML:
                 return atoms, num_atom, np.array([x, y])
             finally:
                 raise ValueError("No atoms section, can't parse file")
-        
+
         @staticmethod
         def get_bonds(content: str) -> tuple:
-        
+
             root = CML.read_file(content)
             bonds, double_bonds, triple_bonds = list(), list(), list()
 
@@ -613,7 +634,7 @@ class CML:
 
         @staticmethod
         def get_properties(content: str) -> list :
-            
+
             root = CML.read_file(content)
             properties = list()
 
@@ -629,20 +650,24 @@ class CML:
             return properties
 
         @staticmethod
-        def parse_cml(content: str) -> dict:
+        def parse_cml(content: str,
+                      b_atom: bool = True,
+                      b_bond: bool = True,
+                      b_prop: bool = True,
+                      ) -> dict:
 
-            atoms, num_atoms, coord = CML.get_coord(content)
-            bonds, double_bonds, triple_bonds, num_bonds = CML.get_bonds(content)    
-            properties = CML.get_properties(content)    
+            atoms, num_atoms, coord = CML.get_coord(content) if b_atom else None, None, None
+            bonds, double_bonds, triple_bonds, num_bonds = CML.get_bonds(content) if b_bond else None, None, None, None
+            properties = CML.get_properties(content) if b_prop else None
 
             return {
                 "atoms"        : atoms,
                 "num_atom"     : num_atoms,
 
                 "properties"   : properties,
-                
+
                 "coord"        : coord,
-                
+
                 "num_bonds"    : num_bonds,
                 "bonds"        : bonds,
                 "double_bonds" : double_bonds,
@@ -658,13 +683,10 @@ def parse_smi(path : str) -> dict:
     with open(path, "r") as smi:
         line = smi.readlines()[0]
 
-    molobject = Chem.MolFromSmiles(line)
-    molecule = {
+    return {
         "molecule"  : line,
-        "MolObject" : molobject
+        "MolObject" : Chem.MolFromSmiles(line)
     }
-
-    return molecule
 
 # %%
 def parse_inchi(path : str) -> dict:
@@ -675,13 +697,11 @@ def parse_inchi(path : str) -> dict:
     with open(path, "r") as inchi:
         line = inchi.readlines()[0]
 
-    molobject = Chem.inchi.MolFromInchi(line)
-    molecule = {
+    return {
         "text"      : line,
-        "molobject" : molobject
-    }
+        "molobject" : Chem.inchi.MolFromInchi(line)
 
-    return molecule
+    }
 
 class GAUSSIAN:
     """
@@ -698,11 +718,13 @@ class GAUSSIAN:
     # Magic numbers = 
     ## Global
     file_extension = "log"
-    
+ 
     ## Pattern for file navigation
+    regex_geometry = re.compile(r"standard orientation")
     regex_mulliken = re.compile(r"Mulliken charges:")
     regex_apt      = re.compile(r"APT charges:")
-    
+    regex_energy   = re.compile(r"Thermal correction to Gibbs Free Energy")
+
     ## Inside sections
     geometry_skip_lines = 5
     mulliken_skip_lines = 2
@@ -719,10 +741,10 @@ class GAUSSIAN:
 
             if "NAtoms=" in split_line:
                 num_atom = int(line.split()[1])
-        
+ 
         if num_atom is None:
             raise ValueError("File does not contains atom numbers")
-        
+ 
         return num_atom
 
     @staticmethod
@@ -733,9 +755,8 @@ class GAUSSIAN:
         geometry_indice = None
 
         for i, line in enumerate(lines[::-1]):
-            split_line = line.split()
 
-            if "standard" in split_line and "orientation" in split_line:
+            if GAUSSIAN.regex_geometry.match(line):
                 geometry_indice = i
                 break
 
@@ -765,7 +786,7 @@ class GAUSSIAN:
             if GAUSSIAN.regex_mulliken.match(line):
                 indice_mulliken = i
                 break
-        
+
         if indice_mulliken is None:
             raise ValueError("No Mulliken charges found in file")
 
@@ -773,7 +794,7 @@ class GAUSSIAN:
         end_charges = start_charges + num_atom + 1 # include all atoms
 
         return [np.float64(line) for line in lines[start_charges:end_charges]]
-    
+
     @staticmethod
     def extract_apt_charges(content: str|list) -> list:
 
@@ -781,22 +802,34 @@ class GAUSSIAN:
         num_atom = GAUSSIAN.extract_num_info(lines)
         indice_apt = None
 
-        for i, line in enumerate(lines):
-            if "APT" in line.split() and len(line.split()) == 2:
+        for i, line in enumerate(lines[::-1]):
+            if GAUSSIAN.regex_apt.match(line):
                 indice_apt = i
-                break 
-        
+                break
+
         if indice_apt is None:
             raise ValueError("No APT charges could not be found")
 
         start_charges = len(lines) - indice_apt + GAUSSIAN.apt_skip_lines
         end_charges = start_charges + num_atom + 1 # include all atoms
-        
-        return [np.float64(line) for line in lines[start_charges:end_charges]]
-        
-    @staticmethod
-    def extract_bond_order(content: str|list):
-         
-        return 'do not have this in my examples files yet'
 
+        return [np.float64(line) for line in lines[start_charges:end_charges]]
+
+    @staticmethod
+    def extract_opt_energy(content : str|list) -> np.float64:
+        lines = read_lines(content, GAUSSIAN.file_extension)
+        num_atom = GAUSSIAN.extract_num_info(lines)
+        indice_energy = None
+
+        for i, line in enumerate(lines[::-1]):
+            if GAUSSIAN.regex_energy.match(line):
+                indice_energy = i
+                break
+
+        if indice_energy is None:
+            raise ValueError("No Gibbs Free found")
+
+        return np.float64(lines[int(num_atom) - indice_energy].split("=")[-1].strip())
+
+class NWCHEM:
 

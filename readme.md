@@ -2,11 +2,11 @@
 
 ## Reasons
 
-I am tired of parsing manually files after each project so here it is a parser for file type.
+I am tired of parsing manually files after each projects so here it is a parser for file type.
 
-Long term project is to contain all extensions with the bare minimum extractions informations : 
+Long term project is to contain all extensions with maximum extraction informations from a file type: 
 
-- Atoms,  
+- Atoms,
 - Coordinates,
 - Bonds,
 - Charges
@@ -14,7 +14,7 @@ Long term project is to contain all extensions with the bare minimum extractions
 Containing :
 
 - Auto detection of extensions
-- Possibility to choose which information to extract from the file (default all) 
+- Possibility to choose which information to extract from the file (default all)
 
 ## dependencies
 
@@ -24,7 +24,7 @@ pip install numpy pyyaml json rdkit
 
 This repo is built in order to provide a python file to parse most of molecular files.
 
-Format supported : 
+Format supported :
 
 | Format              | Description                                                               | Is done |
 |---------------------|---------------------------------------------------------------------------|----------
@@ -35,7 +35,8 @@ Format supported :
 |.xyz                 | Cartesian coordinates                                                     | Y       |
 |.mae                 | Maestro small-molecule format                                             | N       |
 |.sd                  | SDfile variant                                                            | N       |
-|.gjf / .com/ .out    | Gaussian input (geometry of one molecule)                                 | ~       |
+|.gjf                 | Gaussian input (geometry of one molecule)                                 | N       |
+|.com/ .out           | Gaussian output (geometry of one molecule)                                | Y       |
 |.cube                | Gaussian volumetric data tied to a single molecule                        | N       |
 |.mop                 | MOPAC input                                                               | N       |
 |.mopout              | MOPAC output                                                              | N       |
@@ -52,24 +53,25 @@ Format supported :
 
 ### Detection of the extension
 
-First using a rule based (RB).\
+Using a rule based (RB).
 
 ### Parsing the data
 
-If it is not a text based represensation like smiles or inchi
+If it is not a text based representation like smiles or inchi, file will be read and information will be extracted.
 
 Most of the information will be extracted and will be relative to a file.
 Check docs for each extension extraction.
 
 ### Conversion to rdkit object
 
-RDKIT is one of the most used open sourced chemical package avaialble, all molecule will final be converted to a rdkit mol object for easier post treatment.
+RDKIT is one of the most used open sourced chemical package available, all molecule will final be converted to a rdkit mol object for easier post treatment.
 
 ### Final output
 
-A dict with : 
+A dict with :
 
 {\
 "Information Extracted",\
+"Graphx Object",\
 "RDKIT_object",\
 }
