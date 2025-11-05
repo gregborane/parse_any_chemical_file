@@ -35,7 +35,7 @@ Format supported :
 |.xyz                 | Cartesian coordinates                                                     | Y       |
 |.mae                 | Maestro small-molecule format                                             | N       |
 |.sd                  | SDfile variant                                                            | N       |
-|.gjf                 | Gaussian input (geometry of one molecule)                                 | N       |
+|.nwo                 | NWCHEM output (geometry of one molecule)                                  | ~       |
 |.com/ .out           | Gaussian output (geometry of one molecule)                                | Y       |
 |.cube                | Gaussian volumetric data tied to a single molecule                        | N       |
 |.mop                 | MOPAC input                                                               | N       |
@@ -45,6 +45,7 @@ Format supported :
 |.inchi               | IUPAC InChI string saved as file                                          | Y       |
 |.smiles / .smi       | SMILES line notation file                                                 | Y       |
 |.json                | chem-specific schemas like ChemJSON or PubChem JSON for molecules)        | Y       |
+|.toml                | (used in some molecular toolkits for small-molecule storage)              | Y       |
 |.yaml                | (used in some molecular toolkits for small-molecule storage)              | Y       |
 |.mrv                 | ChemAxon Marvin format                                                    | N       |
 |.cdx / .cdxml        | ChemDraw binary and XML molecule formats                                  | N       |
@@ -75,3 +76,7 @@ A dict with :
 "Graphx Object",\
 "RDKIT_object",\
 }
+
+# Improvement
+
+I will rewrite this in Golang for improved performances if I can manage correct treating of binary files I will rewrite all formats else abandon / leave them in python.

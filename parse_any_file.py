@@ -853,3 +853,118 @@ class GAUSSIAN:
             "apt_charges"     : apt_charges,
             "opt_energy"      : opt_energy,
         }
+
+class NWCHEM:
+    """
+    NWCHEM Formatting is a bit cryptid and it seems total molecule energy is well hidden
+    Gibbs Energy = DFT opt energy + Thermal Enthalpy + Zero point energy - TSthermal
+    """
+    #Magic Number =
+
+    ## str and regex
+    file_extension = "nwo"
+    regex_coord = re.compile(r"Atom information ")
+    regex_num = re.compile(r"No. of atoms")
+
+    ## energies regex
+    regex_dft = re.compile(r"Total DFT energy")
+    regex_thermal = re.compile(r"Thermal correction to Enthalpy")
+    regex_zpe = re.compile(r"Zero-Point correction to Energy")
+    regex_temp = re.compile(r"Temperature")
+    regex_entropy = re.compile(r"Total Entropy")
+
+    ## numbers
+    geom_skip_lines = 4
+
+    @staticmethod
+    def get_nums(content: str|list) -> int:
+
+        lines = read_lines(content, NWCHEM.file_extension)
+
+        for line in lines:
+
+            if NWCHEM.regex_num.match(line):
+                return int(line.strip()[-1])
+
+        raise ValueError("Could not find number of atom")
+
+    @staticmethod
+    def get_coord(content: str|list) -> tuple[list, np.ndarray]:
+
+        lines = read_lines(content, NWCHEM.file_extension)
+        indice_coord = None
+
+        for i, line in enumerate(lines):
+
+            if NWCHEM.regex_coord.match(line):
+                indice_coord = i
+                break
+
+        if indice_coord is None:
+            raise ValueError("Could not find Coordinates indice")
+
+        num_atom = NWCHEM.get_nums(lines)
+        start_coord = len(lines) - indice_coord + NWCHEM.geom_skip_lines
+        end_coord = start_coord + num_atom + 1 # include all atoms
+
+        x = [float(line.split()[3]) for line in lines[start_coord: end_coord]]
+        y = [float(line.split()[4]) for line in lines[start_coord: end_coord]]
+        z = [float(line.split()[5]) for line in lines[start_coord: end_coord]]
+        a = [float(line.split()[1]) for line in lines[start_coord: end_coord]]
+        coord = np.array([x, y, z])
+
+        return a, coord
+
+    @staticmethod
+    def get_opt_energy(content: str|list) -> np.float64|int:
+
+        lines = read_lines(content, NWCHEM.file_extension)
+
+        energy_dft, enthalpy_thermal, temp, energy_zpe, entropy = 0, 0, 0, 0, 0
+
+        for line in lines:
+
+            if NWCHEM.regex_dft.match(line):
+                energy_dft = np.float64(line.split()[-1].strip())
+                pass
+
+            if NWCHEM.regex_thermal.match(line):
+                enthalpy_thermal = np.float64(line.split()[-1].strip())
+                pass
+
+            if NWCHEM.regex_zpe.match(line):
+                energy_zpe = np.float64(line.split()[-1].strip())
+                pass
+
+            if NWCHEM.regex_temp.match(line):
+                temp  = np.float64(line.split()[-1].strip())
+                pass
+
+            if NWCHEM.regex_entropy.match(line):
+                entropy = np.float64(line.split()[-1].strip())
+                pass
+
+        if not all((energy_dft, enthalpy_thermal, temp, energy_zpe, entropy)):
+            raise ValueError("Missing one parameter for energy calculation")
+
+        return energy_dft + enthalpy_thermal + energy_zpe - temp*entropy
+
+    @staticmethod
+    def parse_nwo(content: str|list,
+                  b_nums  : bool = True,
+                  b_coord : bool = True,
+                  b_energy: bool = True,
+                  )-> dict:
+
+        lines = read_lines(content, NWCHEM.file_extension)
+
+        num_atom = NWCHEM.get_nums(lines) if b_nums else None
+        a, coord = NWCHEM.get_coord(lines) if b_coord else None, None
+        energy = NWCHEM.get_opt_energy(lines) if b_energy else None
+
+        return {
+            "num_atoms" : num_atom,
+            "atoms"     : a,
+            "coord"     : coord,
+            "energy"    : energy,
+        }
