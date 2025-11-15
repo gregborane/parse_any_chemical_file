@@ -34,7 +34,6 @@ Format supported :
 |.cml                 | Chemical Markup Language                                                  | Y       |
 |.xyz                 | Cartesian coordinates                                                     | Y       |
 |.mae                 | Maestro small-molecule format                                             | N       |
-|.sd                  | SDfile variant                                                            | N       |
 |.nwo                 | NWCHEM output (geometry of one molecule)                                  | Y       |
 |.com/ .out           | Gaussian output (geometry of one molecule)                                | Y       |
 |.cube                | Gaussian volumetric data tied to a single molecule                        | N       |
