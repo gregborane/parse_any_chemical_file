@@ -10,11 +10,11 @@ import networkx as nx
 
 sys.path.append("./")
 
+# %%
 with open("./constant/covalences.json", "r") as p_table:
     periodic_table = json.load(p_table)
 list_p_table_keys = list(periodic_table.keys())
 
-print(periodic_table[list_p_table_keys[0]])
 
 
 # %%
@@ -46,7 +46,7 @@ def compute_distance(
 
 
 # %%
-def generate_bonds(content: str, tolerance: np.float16 = np.float16(0.1)):
+def generate_bonds(content: str|list, tolerance: np.float16 = np.float16(0.1)):
     global periodic_table, list_p_table_keys
 
     coord, atoms, bonds, double_bonds, triple_bonds = get_molecule(content)
@@ -81,99 +81,63 @@ def generate_bonds(content: str, tolerance: np.float16 = np.float16(0.1)):
     Conjugated system will give extra bonds because bonds order is not an int which is the case in our consideration.
 
     To correct such, we need to algorithmically remove those extra bonds by checking valencies of all present atoms. 
-    H = 1, C = 4, etc ... 
+    Most sensitive atom is Carbon because it is often implied in aromatic bonding 
 
     Such determination depends on the valencies considered for the atoms. Hypervalencies atoms will not be taken into account. 
     """
-
-    # Step 1: Count current bonds for each atom
+    
     bond_count = defaultdict(int)
     for i, j in bonds:
         bond_count[i] += 1
         bond_count[j] += 1
 
-    # Step 1: Remove unecessayry bonds from mono valent atoms
-    for i, j in bonds.copy():
-        if (atoms[i] in ["H", "F", "Cl", "Br", "I"] and atoms[j] in ["W", "Mo"]) or (
-            atoms[j] in ["H", "F", "Cl", "Br", "I"] and atoms[i] in ["W", "Mo"]
-        ):
-            bonds.remove((i, j))
-            bond_count[i] -= 1
-            bond_count[j] -= 1
-
-    # Set 2: Get Mo=C bonds
-    if not check_cond:
-        for i, j in bonds:
-            if atoms[i] == "C" and atoms[j] in ["W", "Mo"]:
-                if (
-                    bond_count[i] < valencies["C"]
-                    and bond_count[j] < valencies[atoms[j]]
-                ):  # Ensure valency allows it
-                    if (i, j) in bonds:
-                        double_bonds.add((i, j))  # Convert single bond to double
-                        bond_count[i] += 1
-                        bond_count[j] += 1
-
-            elif atoms[j] == "C" and atoms[i] in ["W", "Mo"]:
-                if (
-                    bond_count[j] < valencies["C"]
-                    and bond_count[i] < valencies[atoms[i]]
-                ):  # Ensure valency allows it
-                    if (i, j) in bonds:
-                        double_bonds.add((i, j))  # Convert single bond to double
-                        bond_count[i] += 1
-                        bond_count[j] += 1
-    else:
-        double_bonds.add((1, 22))  # Convert single bond to double
-        bonds.add((32, 29))
-        bonds.remove((22, 29))
-
-        bond_count[22] += 1
-        bond_count[1] += 1
-        bond_count[32] += 1
-
-    # Step 3: Ensure Carbon (C) has exactly 4 bonds
-    for i, atom in enumerate(atoms):
-        if atom == "C" and bond_count[i] == 3:
-            for j in list(b for a, b in bonds if a == i) + list(
-                a for a, b in bonds if b == i
-            ):
-                if (
-                    bond_count[j] < valencies.get(atoms[j], 4)
-                    and (i, j) not in double_bonds
-                ):
+    for i in range(len(atoms)):
+        elem1 = list_p_table_keys[atoms[i]]
+        if elem1 == "C" and bond_count[i] == 3:
+            for j in list(b for a, b in bonds if a == i) + list(a for a, b in bonds if b == i):
+                valencies = periodic_table[list_p_table_keys[j]]["covalence"]
+                if (bond_count[j] < valencies and (i, j) not in double_bonds):
                     double_bonds.add((i, j))  # Convert single bond to double
                     bond_count[i] += 1
                     bond_count[j] += 1
                     break
-
+    
     return bonds, double_bonds, triple_bonds
 
 
-def get_graph(cat: dict) -> nx.Graph:
+def get_graph(content : str|list) -> nx.Graph:
     """
     Convert xyz file to a nx.graph object
     bonds are edges, nodes are atoms
     cat (dict) : dict containing a four coordinates object with atoms and its respective coordinates
     return G (nx.Graph) : graph object of the molecule
     """
+
+    coord, atoms, bonds, double_bonds, triple_bonds = get_molecule(content)
+    bonds, double_bonds, triple_bonds = generate_bonds(content)
     G = nx.Graph()
     # Add nodes to the graph based on atom positions and symbols
-    for i, atom in enumerate(cat["atoms"]):
-        G.add_node(i, element=atom, pos=(cat["x"][i], cat["y"][i], cat["z"][i]))
+    for i in range(len(atoms)):
+        elem = periodic_table[list_p_table_keys[i]]
+        G.add_node(i, element=elem, pos=(coord[0][i], coord[1][i], coord[2][i]))
 
     # Add edges for single bonds
-    for bond in cat["bonds"]:
-        if bond in cat["double_bonds"]:
+    for bond in bonds:
+        if bond in double_bonds:
             u, v = bond
             bond_type = (
-                "double"  # Testing if this bonds has been identified as double already
+                "double"  
             )
             G.add_edge(u, v, bond_type=bond_type)
-
+        elif bond in triple_bonds:
+            u, v = bond
+            bond_type = (
+                "triple" 
+            )
+            G.add_edge(u, v, bond_type=bond_type)
         else:
             u, v = bond
-            bond_type = "single"  # Attributing the single type is no other exist
+            bond_type = "single"  
             G.add_edge(u, v, bond_type=bond_type)
     return G
 
@@ -184,6 +148,13 @@ def nx_to_mol(G: nx.Graph):
     G (nx.graph): graph to convert
     return mol : rdkit mol object
     """
+    
+    bond_type_map = {
+        "single": Chem.BondType.SINGLE,
+        "double": Chem.BondType.DOUBLE,
+        "triple": Chem.BondType.TRIPLE
+    }
+
     mol = Chem.RWMol()
     atomic_nums = nx.get_node_attributes(G, "element")
     # atomic_nums = [periodic_table[atom] for atom in atoms.values()]
@@ -203,3 +174,20 @@ def nx_to_mol(G: nx.Graph):
 
     Chem.SanitizeMol(mol)
     return mol
+
+def main(content : str|list) : 
+    coord, atoms, bonds, double_bonds, triple_bonds = get_molecule(content)
+    bonds, double_bonds, triple_bonds = generate_bonds(content)
+    
+    graph_mol = get_graph(content)
+    rdkit_mol = nx_to_mol(graph_mol)
+
+    return {
+            "coord"       : coord,
+            "atoms"       : atoms,
+            "bonds"       : bonds,
+            "double_bonds": double_bonds,
+            "triple_bonds": triple_bonds,
+            "graph_mol"   : graph_mol,
+            "rdkit_mol"   : rdkit_mol,
+    }
